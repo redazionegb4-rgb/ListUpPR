@@ -7,7 +7,6 @@ struct PRMainView: View {
             PRDashboardView().tabItem { Label("Home", systemImage: "sparkles") }
             EventsView().tabItem { Label("Eventi", systemImage: "calendar") }
             AllGuestsView().tabItem { Label("Clienti", systemImage: "person.3.fill") }
-            ReportsView().tabItem { Label("Rendiconto", systemImage: "chart.bar.fill") }
             SettingsView().tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
         }.tint(.appPurple)
     }
@@ -147,123 +146,6 @@ struct AllGuestsView: View {
     }
 }
 
-
-struct ReportsView: View {
-    @EnvironmentObject var model: AppModel
-    @State private var selectedEventID: UUID?
-
-    private var selectedEvent: PREvent? {
-        if let selectedEventID, let event = model.events.first(where: { $0.id == selectedEventID }) { return event }
-        return model.events.first
-    }
-
-    var body: some View {
-        NavigationStack {
-            Group {
-                if let event = selectedEvent {
-                    EventReportView(event: event)
-                } else {
-                    ContentUnavailableView("Nessun rendiconto", systemImage: "chart.bar", description: Text("Crea un evento per visualizzare statistiche e incassi."))
-                }
-            }
-            .navigationTitle("Rendiconto")
-            .toolbar {
-                if !model.events.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            ForEach(model.events) { event in
-                                Button {
-                                    selectedEventID = event.id
-                                } label: {
-                                    if selectedEvent?.id == event.id { Label(event.name, systemImage: "checkmark") }
-                                    else { Text(event.name) }
-                                }
-                            }
-                        } label: { Label("Evento", systemImage: "calendar") }
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct EventReportView: View {
-    @EnvironmentObject var model: AppModel
-    let event: PREvent
-
-    private var guests: [Guest] { model.guestsByEvent[event.id] ?? [] }
-    private var entered: [Guest] { guests.filter(\.entered) }
-    private var absentCount: Int { max(0, guests.count - entered.count) }
-    private var attendance: Double { guests.isEmpty ? 0 : (Double(entered.count) / Double(guests.count)) * 100 }
-    private var listValue: Double { guests.reduce(0) { $0 + $1.price } }
-    private var collected: Double { guests.reduce(0) { $0 + min($1.deposit, $1.price) } }
-    private var remaining: Double { guests.reduce(0) { $0 + $1.remaining } }
-    private var packages: [(name: String, guests: [Guest])] {
-        Dictionary(grouping: guests) { $0.packageName.isEmpty ? "Senza pacchetto" : $0.packageName }
-            .map { (name: $0.key, guests: $0.value) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                PremiumCard {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(event.name).font(.title2.bold())
-                        Label(event.venue, systemImage: "mappin.and.ellipse")
-                        Label(event.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
-                    }
-                }
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
-                    ReportMetric(title: "In lista", value: "\(guests.count)", icon: "person.3.fill")
-                    ReportMetric(title: "Entrati", value: "\(entered.count)", icon: "checkmark.circle.fill")
-                    ReportMetric(title: "Assenti", value: "\(absentCount)", icon: "person.crop.circle.badge.xmark")
-                    ReportMetric(title: "Affluenza", value: String(format: "%.0f%%", attendance), icon: "chart.line.uptrend.xyaxis")
-                    ReportMetric(title: "Valore lista", value: listValue.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill")
-                    ReportMetric(title: "Incassato", value: collected.formatted(.currency(code: "EUR")), icon: "banknote.fill")
-                    ReportMetric(title: "Da riscuotere", value: remaining.formatted(.currency(code: "EUR")), icon: "clock.badge.exclamationmark")
-                }
-
-                Text("Riepilogo pacchetti").font(.title2.bold())
-                if packages.isEmpty {
-                    ContentUnavailableView("Nessun pacchetto", systemImage: "ticket")
-                } else {
-                    ForEach(packages, id: \.name) { package in
-                        PremiumCard {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text(package.name).font(.headline)
-                                    Spacer()
-                                    Text("\(package.guests.count) clienti").foregroundStyle(.secondary)
-                                }
-                                Divider()
-                                LabeledContent("Entrati", value: "\(package.guests.filter(\.entered).count)")
-                                LabeledContent("Valore", value: package.guests.reduce(0) { $0 + $1.price }.formatted(.currency(code: "EUR")))
-                                LabeledContent("Incassato", value: package.guests.reduce(0) { $0 + min($1.deposit, $1.price) }.formatted(.currency(code: "EUR")))
-                            }
-                        }
-                    }
-                }
-            }.padding(20)
-        }
-    }
-}
-
-struct ReportMetric: View {
-    let title: String
-    let value: String
-    let icon: String
-    var body: some View {
-        PremiumCard {
-            VStack(alignment: .leading, spacing: 10) {
-                Image(systemName: icon).font(.title2).foregroundStyle(Color.appPurple)
-                Text(value).font(.title2.bold()).minimumScaleFactor(0.7)
-                Text(title).font(.caption).foregroundStyle(.secondary)
-            }.frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
 
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel

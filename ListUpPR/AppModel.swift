@@ -49,6 +49,7 @@ final class AppModel: ObservableObject {
     @Published var entranceCode = ""
     @Published var theme: AppTheme = .dark
     @Published var syncEnabled = true
+    @Published var lastEntry: (eventID: UUID, guestID: UUID)?
 
     private let defaults = UserDefaults.standard
     private let encoder = JSONEncoder()
@@ -143,9 +144,23 @@ final class AppModel: ObservableObject {
     }
 
     func toggleEntry(guestID: UUID, eventID: UUID) {
-        guard let index = guestsByEvent[eventID]?.firstIndex(where: { $0.id == guestID }) else { return }
-        guestsByEvent[eventID]?[index].entered.toggle()
-        guestsByEvent[eventID]?[index].entryTime = guestsByEvent[eventID]?[index].entered == true ? .now : nil
+        guard var guests = guestsByEvent[eventID],
+              let index = guests.firstIndex(where: { $0.id == guestID }) else { return }
+        guests[index].entered.toggle()
+        guests[index].entryTime = guests[index].entered ? .now : nil
+        guestsByEvent[eventID] = guests
+        lastEntry = guests[index].entered ? (eventID, guestID) : nil
+        save()
+    }
+
+    func undoLastEntry() {
+        guard let lastEntry,
+              var guests = guestsByEvent[lastEntry.eventID],
+              let index = guests.firstIndex(where: { $0.id == lastEntry.guestID }) else { return }
+        guests[index].entered = false
+        guests[index].entryTime = nil
+        guestsByEvent[lastEntry.eventID] = guests
+        self.lastEntry = nil
         save()
     }
 
