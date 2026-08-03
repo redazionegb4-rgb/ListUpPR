@@ -48,7 +48,7 @@ final class AppModel: ObservableObject {
     @Published var guestsByEvent: [UUID: [Guest]] = [:]
     @Published var entranceCode = ""
     @Published var theme: AppTheme = .dark
-    @Published var syncEnabled = true
+    @Published var syncEnabled = false
 
     private let defaults = UserDefaults.standard
     private let encoder = JSONEncoder()
@@ -178,6 +178,6 @@ final class AppModel: ObservableObject {
         if let raw = defaults.string(forKey: "role.v2") { selectedRole = AppRole(rawValue: raw) }
         entranceCode = defaults.string(forKey: "entranceCode.v2") ?? ""
         theme = AppTheme(rawValue: defaults.string(forKey: "theme.v2") ?? "") ?? .dark
-        syncEnabled = defaults.object(forKey: "sync.v2") as? Bool ?? true
+        syncEnabled = defaults.object(forKey: "sync.v2") as? Bool ?? false
     }
 }

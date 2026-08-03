@@ -155,13 +155,13 @@ struct SettingsView: View {
                     Button("Copia codice") { UIPasteboard.general.string = model.profile?.code }
                 }
                 Section("Aspetto") {
-                    Picker("Tema", selection: Binding(get: { model.theme }, set: model.updateTheme)) {
+                    Picker("Tema", selection: Binding(get: { model.theme }, set: { model.updateTheme($0) })) {
                         ForEach(AppModel.AppTheme.allCases) { Text($0.rawValue).tag($0) }
                     }
                 }
-                Section("Sincronizzazione") {
-                    Toggle("CloudKit", isOn: Binding(get: { model.syncEnabled }, set: model.updateSync))
-                    Text("La sincronizzazione tra dispositivi richiede iCloud attivo e il container CloudKit configurato nel progetto.").font(.footnote).foregroundStyle(.secondary)
+                Section("Dati") {
+                    LabeledContent("Salvataggio", value: "Locale sul dispositivo")
+                    Text("Questa build non richiede CloudKit e può essere archiviata e inviata ad App Store Connect senza container iCloud.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section {
                     Button("Esci dall’account", role: .destructive) { model.logout() }
