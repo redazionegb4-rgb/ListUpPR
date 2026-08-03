@@ -21,7 +21,7 @@ struct EntranceDashboardView: View {
                                 Text(event.name).font(.headline)
                                 Text("\(event.venue) • \(event.date.formatted(date: .abbreviated, time: .shortened))")
                                     .font(.caption).foregroundStyle(.secondary)
-                                Text("\((model.guestsByEvent[event.id] ?? []).reduce(0) { $0 + $1.peopleCount }) persone")
+                                Text("\((model.guestsByEvent[event.id] ?? []).count) persone")
                                     .font(.caption).foregroundStyle(Color.appPurple)
                             }.padding(.vertical, 4)
                         }

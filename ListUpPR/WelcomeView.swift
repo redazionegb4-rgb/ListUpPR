@@ -86,14 +86,23 @@ struct PRLoginView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Accesso PR") {
-                    TextField("Codice di 3 cifre", text: $code).keyboardType(.numberPad)
-                    SecureField("Password", text: $password)
+                Section("Accedi con uno dei due dati") {
+                    TextField("Codice PR di 3 cifre", text: $code)
+                        .keyboardType(.numberPad)
+                        .onChange(of: code) { _, newValue in
+                            code = String(newValue.filter(\.isNumber).prefix(3))
+                        }
+                    SecureField("Oppure inserisci la password", text: $password)
+                }
+                Section {
+                    Text("Non è necessario compilare entrambi i campi: puoi entrare usando solamente il codice PR oppure solamente la password.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
                 if error { Text("Codice o password non corretti.").foregroundStyle(.red) }
                 Button("Accedi") {
                     if model.loginAsPR(code: code, password: password) { dismiss() } else { error = true }
-                }.disabled(code.filter(\.isNumber).count != 3 || password.isEmpty)
+                }.disabled(code.filter(\.isNumber).count != 3 && password.isEmpty)
             }
             .navigationTitle("Bentornato")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }

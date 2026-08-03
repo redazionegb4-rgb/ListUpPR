@@ -13,7 +13,6 @@ struct Guest: Identifiable, Codable, Hashable {
     var id = UUID()
     var firstName: String
     var lastName: String
-    var peopleCount: Int
     var listName: String
     var packageName: String
     var price: Double
@@ -58,8 +57,8 @@ final class AppModel: ObservableObject {
     init() { load() }
 
     var allGuests: [Guest] { events.flatMap { guestsByEvent[$0.id] ?? [] } }
-    var totalPeople: Int { allGuests.reduce(0) { $0 + $1.peopleCount } }
-    var enteredPeople: Int { allGuests.filter(\.entered).reduce(0) { $0 + $1.peopleCount } }
+    var totalPeople: Int { allGuests.count }
+    var enteredPeople: Int { allGuests.filter(\.entered).count }
     var activeEvent: PREvent? { events.sorted { $0.date < $1.date }.first(where: { $0.isActive }) }
 
     func registerPR(name: String, password: String) -> Bool {
@@ -76,7 +75,10 @@ final class AppModel: ObservableObject {
     func loginAsPR(code: String, password: String) -> Bool {
         guard let profile else { return false }
         let cleanCode = code.filter(\.isNumber)
-        guard cleanCode == profile.code, password == profile.password else { return false }
+        let cleanPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        let codeMatches = !cleanCode.isEmpty && cleanCode == profile.code
+        let passwordMatches = !cleanPassword.isEmpty && cleanPassword == profile.password
+        guard codeMatches || passwordMatches else { return false }
         selectedRole = .pr
         save()
         return true

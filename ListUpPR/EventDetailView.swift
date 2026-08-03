@@ -21,8 +21,8 @@ struct EventDetailView: View {
         List {
             Section {
                 HStack(spacing: 12) {
-                    SummaryPill(value: "\(guests.reduce(0) { $0 + $1.peopleCount })", label: "In lista", icon: "person.3.fill")
-                    SummaryPill(value: "\(guests.filter(\.entered).reduce(0) { $0 + $1.peopleCount })", label: "Entrati", icon: "checkmark.circle.fill")
+                    SummaryPill(value: "\(guests.count)", label: "In lista", icon: "person.3.fill")
+                    SummaryPill(value: "\(guests.filter(\.entered).count)", label: "Entrati", icon: "checkmark.circle.fill")
                 }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
             }
 
@@ -77,7 +77,7 @@ struct GuestRow: View {
                     .font(.title2).foregroundStyle(guest.entered ? .green : .secondary)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(guest.fullName).font(.headline).foregroundStyle(.primary)
-                    Text("\(guest.peopleCount) persone • \(guest.packageName)").font(.subheadline).foregroundStyle(.secondary)
+                    Text(guest.packageName).font(.subheadline).foregroundStyle(.secondary)
                     HStack(spacing: 10) {
                         if !guest.listName.isEmpty { Label(guest.listName, systemImage: "list.bullet") }
                         if guest.remaining > 0 { Label("€\(guest.remaining, specifier: "%.0f") da pagare", systemImage: "eurosign.circle") .foregroundStyle(.orange) }
@@ -94,7 +94,7 @@ struct AddGuestView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
     let eventID: UUID
-    @State private var first = ""; @State private var last = ""; @State private var count = 1
+    @State private var first = ""; @State private var last = ""
     @State private var listName = ""; @State private var packageName = "Ingresso"
     @State private var price = 0.0; @State private var deposit = 0.0; @State private var notes = ""
 
@@ -104,7 +104,6 @@ struct AddGuestView: View {
                 Section("Cliente") {
                     TextField("Nome", text: $first)
                     TextField("Cognome", text: $last)
-                    Stepper("Numero persone: \(count)", value: $count, in: 1...30)
                 }
                 Section("Prenotazione") {
                     TextField("Nome lista", text: $listName)
@@ -114,7 +113,7 @@ struct AddGuestView: View {
                     TextField("Note", text: $notes, axis: .vertical).lineLimit(2...5)
                 }
                 Button("Aggiungi cliente") {
-                    let guest = Guest(firstName: first, lastName: last, peopleCount: count, listName: listName, packageName: packageName, price: price, deposit: deposit, notes: notes)
+                    let guest = Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: price, deposit: deposit, notes: notes)
                     model.addGuest(guest, to: eventID); dismiss()
                 }.disabled(first.trimmingCharacters(in: .whitespaces).isEmpty)
             }

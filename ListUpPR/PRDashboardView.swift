@@ -72,9 +72,9 @@ struct LargeEventCard: View {
                 Label(event.date.formatted(date: .long, time: .shortened), systemImage: "calendar.badge.clock")
                 Divider()
                 HStack {
-                    Label("\(guests.reduce(0) { $0 + $1.peopleCount }) in lista", systemImage: "person.2.fill")
+                    Label("\(guests.count) in lista", systemImage: "person.2.fill")
                     Spacer()
-                    Label("\(guests.filter(\.entered).reduce(0) { $0 + $1.peopleCount }) entrati", systemImage: "checkmark.circle.fill")
+                    Label("\(guests.filter(\.entered).count) entrati", systemImage: "checkmark.circle.fill")
                 }.font(.subheadline)
             }
         }
