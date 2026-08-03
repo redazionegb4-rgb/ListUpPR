@@ -128,6 +128,21 @@ final class AppModel: ObservableObject {
         save()
     }
 
+    func markGuestPaid(guestID: UUID, eventID: UUID) {
+        guard let index = guestsByEvent[eventID]?.firstIndex(where: { $0.id == guestID }) else { return }
+        guestsByEvent[eventID]?[index].deposit = guestsByEvent[eventID]?[index].price ?? 0
+        save()
+    }
+
+    func duplicateEvent(_ event: PREvent) {
+        let copy = PREvent(name: "\(event.name) - Copia", venue: event.venue, date: Calendar.current.date(byAdding: .day, value: 7, to: event.date) ?? event.date)
+        events.insert(copy, at: 0)
+        guestsByEvent[copy.id] = (guestsByEvent[event.id] ?? []).map {
+            Guest(firstName: $0.firstName, lastName: $0.lastName, listName: $0.listName, packageName: $0.packageName, price: $0.price, deposit: 0, notes: $0.notes)
+        }
+        save()
+    }
+
     func updateTheme(_ newTheme: AppTheme) { theme = newTheme; save() }
     func updateSync(_ enabled: Bool) { syncEnabled = enabled; save() }
 

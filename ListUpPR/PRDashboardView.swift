@@ -6,6 +6,7 @@ struct PRMainView: View {
             PRDashboardView().tabItem { Label("Home", systemImage: "sparkles") }
             EventsView().tabItem { Label("Eventi", systemImage: "calendar") }
             AllGuestsView().tabItem { Label("Clienti", systemImage: "person.3.fill") }
+            ReportsView().tabItem { Label("Rendiconto", systemImage: "chart.bar.fill") }
             SettingsView().tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
         }.tint(.appPurple)
     }
@@ -186,6 +187,91 @@ struct NewEventView: View {
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
             }.navigationTitle("Nuovo evento")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+        }
+    }
+}
+
+
+struct ReportsView: View {
+    @EnvironmentObject var model: AppModel
+    @State private var selectedEventID: UUID?
+
+    private var event: PREvent? {
+        if let id = selectedEventID { return model.events.first(where: { $0.id == id }) }
+        return model.events.sorted { $0.date > $1.date }.first
+    }
+    private var guests: [Guest] { event.map { model.guestsByEvent[$0.id] ?? [] } ?? [] }
+    private var entered: [Guest] { guests.filter(\.entered) }
+    private var totalValue: Double { guests.reduce(0) { $0 + $1.price } }
+    private var collected: Double { guests.reduce(0) { $0 + min($1.deposit, $1.price) } }
+    private var remaining: Double { guests.reduce(0) { $0 + $1.remaining } }
+    private var attendance: Int { guests.isEmpty ? 0 : Int((Double(entered.count) / Double(guests.count) * 100).rounded()) }
+    private var packages: [(String, Int, Double)] {
+        Dictionary(grouping: guests, by: { $0.packageName.isEmpty ? "Ingresso" : $0.packageName })
+            .map { ($0.key, $0.value.count, $0.value.reduce(0) { $0 + $1.price }) }
+            .sorted { $0.1 > $1.1 }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if model.events.isEmpty {
+                        ContentUnavailableView("Nessun rendiconto", systemImage: "chart.bar", description: Text("Crea un evento e aggiungi i clienti."))
+                    } else {
+                        Picker("Evento", selection: Binding(get: { selectedEventID ?? event?.id }, set: { selectedEventID = $0 })) {
+                            ForEach(model.events) { Text($0.name).tag(Optional($0.id)) }
+                        }.pickerStyle(.menu)
+
+                        if let event {
+                            PremiumCard {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(event.name).font(.title2.bold())
+                                    Text("\(event.venue) • \(event.date.formatted(date: .long, time: .shortened))").foregroundStyle(.secondary)
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
+                                ReportMetric(title: "In lista", value: "\(guests.count)", icon: "person.3.fill")
+                                ReportMetric(title: "Entrati", value: "\(entered.count)", icon: "checkmark.circle.fill")
+                                ReportMetric(title: "Assenti", value: "\(guests.count - entered.count)", icon: "person.crop.circle.badge.xmark")
+                                ReportMetric(title: "Affluenza", value: "\(attendance)%", icon: "chart.line.uptrend.xyaxis")
+                                ReportMetric(title: "Valore totale", value: totalValue.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill")
+                                ReportMetric(title: "Incassato", value: collected.formatted(.currency(code: "EUR")), icon: "banknote.fill")
+                                ReportMetric(title: "Da riscuotere", value: remaining.formatted(.currency(code: "EUR")), icon: "clock.badge.exclamationmark")
+                            }
+
+                            if !packages.isEmpty {
+                                Text("Riepilogo pacchetti").font(.title3.bold())
+                                PremiumCard {
+                                    VStack(spacing: 0) {
+                                        ForEach(Array(packages.enumerated()), id: \.offset) { index, item in
+                                            HStack {
+                                                VStack(alignment: .leading) { Text(item.0).font(.headline); Text("\(item.1) clienti").font(.caption).foregroundStyle(.secondary) }
+                                                Spacer(); Text(item.2.formatted(.currency(code: "EUR"))).fontWeight(.semibold)
+                                            }.padding(.vertical, 12)
+                                            if index < packages.count - 1 { Divider() }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }.padding(20).frame(maxWidth: 900)
+            }.navigationTitle("Rendiconto")
+        }
+    }
+}
+
+struct ReportMetric: View {
+    let title: String; let value: String; let icon: String
+    var body: some View {
+        PremiumCard {
+            HStack(spacing: 12) {
+                Image(systemName: icon).font(.title2).foregroundStyle(Color.appPurple)
+                VStack(alignment: .leading, spacing: 3) { Text(value).font(.title3.bold()); Text(title).font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+            }
         }
     }
 }
