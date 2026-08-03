@@ -7,38 +7,86 @@ struct EventDetailView: View {
     @State private var search = ""
     @State private var showAdd = false
 
+    var guests: [Guest] { model.guestsByEvent[event.id] ?? [] }
     var filtered: [Guest] {
-        let list = model.guestsByEvent[event.id] ?? []
-        guard !search.isEmpty else { return list }
-        return list.filter { $0.fullName.localizedCaseInsensitiveContains(search) || $0.packageName.localizedCaseInsensitiveContains(search) }
+        guard !search.isEmpty else { return guests }
+        return guests.filter {
+            $0.fullName.localizedCaseInsensitiveContains(search) ||
+            $0.packageName.localizedCaseInsensitiveContains(search) ||
+            $0.listName.localizedCaseInsensitiveContains(search)
+        }
     }
 
     var body: some View {
         List {
             Section {
-                HStack { Label("\(filtered.filter(\.entered).count) entrati", systemImage: "checkmark.circle.fill"); Spacer(); Label("\(filtered.count) nominativi", systemImage: "person.2.fill") }.font(.subheadline)
+                HStack(spacing: 12) {
+                    SummaryPill(value: "\(guests.reduce(0) { $0 + $1.peopleCount })", label: "In lista", icon: "person.3.fill")
+                    SummaryPill(value: "\(guests.filter(\.entered).reduce(0) { $0 + $1.peopleCount })", label: "Entrati", icon: "checkmark.circle.fill")
+                }.listRowBackground(Color.clear).listRowInsets(EdgeInsets())
             }
+
             Section("Lista clienti") {
                 ForEach(filtered) { guest in
-                    Button { model.toggleEntry(guestID: guest.id, eventID: event.id) } label: {
-                        HStack(spacing: 14) {
-                            Image(systemName: guest.entered ? "checkmark.circle.fill" : "circle").font(.title2).foregroundStyle(guest.entered ? .green : .secondary)
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(guest.fullName).font(.headline).strikethrough(guest.entered)
-                                Text("\(guest.peopleCount) persone • \(guest.packageName)").font(.caption).foregroundStyle(.secondary)
-                                if guest.remaining > 0 { Text("Da pagare: €\(guest.remaining, specifier: "%.2f")").font(.caption2).foregroundStyle(.orange) }
-                            }
-                            Spacer()
+                    GuestRow(guest: guest, entranceMode: entranceMode) {
+                        model.toggleEntry(guestID: guest.id, eventID: event.id)
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button { model.toggleEntry(guestID: guest.id, eventID: event.id) } label: {
+                            Label(guest.entered ? "Annulla" : "Entrato", systemImage: guest.entered ? "arrow.uturn.backward" : "checkmark")
+                        }.tint(guest.entered ? .orange : .green)
+                        if !entranceMode {
+                            Button(role: .destructive) { model.deleteGuest(guest, eventID: event.id) } label: { Label("Elimina", systemImage: "trash") }
                         }
-                    }.buttonStyle(.plain)
+                    }
                 }
-                .onDelete { model.deleteGuest(at: $0, eventID: event.id) }
             }
         }
         .navigationTitle(event.name)
-        .searchable(text: $search, prompt: "Cerca cliente o pacchetto")
-        .toolbar { if !entranceMode { ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "person.badge.plus") } } } }
+        .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $search, prompt: "Cerca nome, lista o pacchetto")
+        .overlay { if guests.isEmpty { ContentUnavailableView("Lista vuota", systemImage: "person.badge.plus", description: Text(entranceMode ? "Il PR non ha ancora inserito clienti." : "Aggiungi il primo cliente all’evento.")) } }
+        .toolbar {
+            if !entranceMode {
+                ToolbarItem(placement: .topBarTrailing) { Button { showAdd = true } label: { Image(systemName: "person.badge.plus") } }
+            }
+        }
         .sheet(isPresented: $showAdd) { AddGuestView(eventID: event.id) }
+    }
+}
+
+struct SummaryPill: View {
+    let value: String, label: String, icon: String
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon).foregroundStyle(Color.appPurple)
+            VStack(alignment: .leading, spacing: 1) { Text(value).font(.title3.bold()); Text(label).font(.caption).foregroundStyle(.secondary) }
+            Spacer()
+        }.padding(14).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18)).frame(maxWidth: .infinity)
+    }
+}
+
+struct GuestRow: View {
+    let guest: Guest
+    let entranceMode: Bool
+    let toggle: () -> Void
+    var body: some View {
+        Button(action: toggle) {
+            HStack(spacing: 14) {
+                Image(systemName: guest.entered ? "checkmark.circle.fill" : "circle")
+                    .font(.title2).foregroundStyle(guest.entered ? .green : .secondary)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(guest.fullName).font(.headline).foregroundStyle(.primary)
+                    Text("\(guest.peopleCount) persone • \(guest.packageName)").font(.subheadline).foregroundStyle(.secondary)
+                    HStack(spacing: 10) {
+                        if !guest.listName.isEmpty { Label(guest.listName, systemImage: "list.bullet") }
+                        if guest.remaining > 0 { Label("€\(guest.remaining, specifier: "%.0f") da pagare", systemImage: "eurosign.circle") .foregroundStyle(.orange) }
+                    }.font(.caption)
+                    if guest.entered, let entryTime = guest.entryTime { Text("Entrato alle \(entryTime.formatted(date: .omitted, time: .shortened))").font(.caption2).foregroundStyle(.green) }
+                }
+                Spacer()
+            }.padding(.vertical, 5)
+        }.buttonStyle(.plain)
     }
 }
 
@@ -47,15 +95,31 @@ struct AddGuestView: View {
     @Environment(\.dismiss) var dismiss
     let eventID: UUID
     @State private var first = ""; @State private var last = ""; @State private var count = 1
-    @State private var list = "Lista PR"; @State private var package = "Ingresso + drink"
+    @State private var listName = ""; @State private var packageName = "Ingresso"
     @State private var price = 0.0; @State private var deposit = 0.0; @State private var notes = ""
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Cliente") { TextField("Nome", text: $first); TextField("Cognome", text: $last); Stepper("Persone: \(count)", value: $count, in: 1...20) }
-                Section("Prenotazione") { TextField("Nome lista", text: $list); TextField("Pacchetto", text: $package); TextField("Prezzo totale", value: $price, format: .number).keyboardType(.decimalPad); TextField("Acconto", value: $deposit, format: .number).keyboardType(.decimalPad); TextField("Note", text: $notes, axis: .vertical) }
-                Button("Aggiungi alla lista") { model.addGuest(Guest(firstName: first, lastName: last, peopleCount: count, listName: list, packageName: package, price: price, deposit: deposit, notes: notes), to: eventID); dismiss() }.disabled(first.isEmpty)
-            }.navigationTitle("Nuovo cliente").toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+                Section("Cliente") {
+                    TextField("Nome", text: $first)
+                    TextField("Cognome", text: $last)
+                    Stepper("Numero persone: \(count)", value: $count, in: 1...30)
+                }
+                Section("Prenotazione") {
+                    TextField("Nome lista", text: $listName)
+                    TextField("Pacchetto scelto", text: $packageName)
+                    TextField("Prezzo totale", value: $price, format: .number).keyboardType(.decimalPad)
+                    TextField("Acconto versato", value: $deposit, format: .number).keyboardType(.decimalPad)
+                    TextField("Note", text: $notes, axis: .vertical).lineLimit(2...5)
+                }
+                Button("Aggiungi cliente") {
+                    let guest = Guest(firstName: first, lastName: last, peopleCount: count, listName: listName, packageName: packageName, price: price, deposit: deposit, notes: notes)
+                    model.addGuest(guest, to: eventID); dismiss()
+                }.disabled(first.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .navigationTitle("Nuovo cliente")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
 }
