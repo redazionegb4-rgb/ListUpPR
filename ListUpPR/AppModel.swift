@@ -155,8 +155,10 @@ final class AppModel: ObservableObject {
     }
 
     func markBalancePaid(guestID: UUID, eventID: UUID) {
-        guard let index = guestsByEvent[eventID]?.firstIndex(where: { $0.id == guestID }) else { return }
-        guestsByEvent[eventID]?[index].deposit = guestsByEvent[eventID]?[index].price
+        guard var guests = guestsByEvent[eventID],
+              let index = guests.firstIndex(where: { $0.id == guestID }) else { return }
+        guests[index].deposit = guests[index].price
+        guestsByEvent[eventID] = guests
         save()
     }
 
