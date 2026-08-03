@@ -48,7 +48,7 @@ final class AppModel: ObservableObject {
     @Published var guestsByEvent: [UUID: [Guest]] = [:]
     @Published var entranceCode = ""
     @Published var theme: AppTheme = .dark
-    @Published var syncEnabled = false
+    @Published var syncEnabled = true
 
     private let defaults = UserDefaults.standard
     private let encoder = JSONEncoder()
@@ -111,6 +111,32 @@ final class AppModel: ObservableObject {
         save()
     }
 
+    @discardableResult
+    func duplicateEvent(_ event: PREvent) -> PREvent {
+        let copy = PREvent(
+            name: "\(event.name) - Copia",
+            venue: event.venue,
+            date: Calendar.current.date(byAdding: .day, value: 7, to: event.date) ?? event.date,
+            isActive: event.isActive
+        )
+        events.insert(copy, at: 0)
+        guestsByEvent[copy.id] = (guestsByEvent[event.id] ?? []).map { guest in
+            Guest(
+                firstName: guest.firstName,
+                lastName: guest.lastName,
+                listName: guest.listName,
+                packageName: guest.packageName,
+                price: guest.price,
+                deposit: guest.deposit,
+                notes: guest.notes,
+                entered: false,
+                entryTime: nil
+            )
+        }
+        save()
+        return copy
+    }
+
     func addGuest(_ guest: Guest, to eventID: UUID) {
         guestsByEvent[eventID, default: []].append(guest)
         save()
@@ -128,18 +154,9 @@ final class AppModel: ObservableObject {
         save()
     }
 
-    func markGuestPaid(guestID: UUID, eventID: UUID) {
+    func markBalancePaid(guestID: UUID, eventID: UUID) {
         guard let index = guestsByEvent[eventID]?.firstIndex(where: { $0.id == guestID }) else { return }
-        guestsByEvent[eventID]?[index].deposit = guestsByEvent[eventID]?[index].price ?? 0
-        save()
-    }
-
-    func duplicateEvent(_ event: PREvent) {
-        let copy = PREvent(name: "\(event.name) - Copia", venue: event.venue, date: Calendar.current.date(byAdding: .day, value: 7, to: event.date) ?? event.date)
-        events.insert(copy, at: 0)
-        guestsByEvent[copy.id] = (guestsByEvent[event.id] ?? []).map {
-            Guest(firstName: $0.firstName, lastName: $0.lastName, listName: $0.listName, packageName: $0.packageName, price: $0.price, deposit: 0, notes: $0.notes)
-        }
+        guestsByEvent[eventID]?[index].deposit = guestsByEvent[eventID]?[index].price
         save()
     }
 
@@ -178,6 +195,6 @@ final class AppModel: ObservableObject {
         if let raw = defaults.string(forKey: "role.v2") { selectedRole = AppRole(rawValue: raw) }
         entranceCode = defaults.string(forKey: "entranceCode.v2") ?? ""
         theme = AppTheme(rawValue: defaults.string(forKey: "theme.v2") ?? "") ?? .dark
-        syncEnabled = defaults.object(forKey: "sync.v2") as? Bool ?? false
+        syncEnabled = defaults.object(forKey: "sync.v2") as? Bool ?? true
     }
 }

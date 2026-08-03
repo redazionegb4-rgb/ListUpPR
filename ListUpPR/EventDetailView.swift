@@ -35,6 +35,9 @@ struct EventDetailView: View {
                         Button { model.toggleEntry(guestID: guest.id, eventID: event.id) } label: {
                             Label(guest.entered ? "Annulla" : "Entrato", systemImage: guest.entered ? "arrow.uturn.backward" : "checkmark")
                         }.tint(guest.entered ? .orange : .green)
+                        if guest.remaining > 0 {
+                            Button { model.markBalancePaid(guestID: guest.id, eventID: event.id) } label: { Label("Saldo pagato", systemImage: "eurosign.circle.fill") }.tint(.blue)
+                        }
                         if !entranceMode {
                             Button(role: .destructive) { model.deleteGuest(guest, eventID: event.id) } label: { Label("Elimina", systemImage: "trash") }
                         }

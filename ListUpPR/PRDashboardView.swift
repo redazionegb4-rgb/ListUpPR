@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct PRMainView: View {
@@ -108,7 +109,10 @@ struct EventsView: View {
                             Text(event.name).font(.headline)
                             Text("\(event.venue) • \(event.date.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
                         }.padding(.vertical, 5)
-                    }.swipeActions { Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina", systemImage: "trash") } }
+                    }.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina", systemImage: "trash") }
+                        Button { _ = model.duplicateEvent(event) } label: { Label("Duplica", systemImage: "plus.square.on.square") }.tint(.appPurple)
+                    }
                 }
             }.navigationTitle("Eventi")
             .overlay { if model.events.isEmpty { ContentUnavailableView("Nessun evento", systemImage: "calendar", description: Text("Crea il primo evento.")) } }
@@ -143,6 +147,124 @@ struct AllGuestsView: View {
     }
 }
 
+
+struct ReportsView: View {
+    @EnvironmentObject var model: AppModel
+    @State private var selectedEventID: UUID?
+
+    private var selectedEvent: PREvent? {
+        if let selectedEventID, let event = model.events.first(where: { $0.id == selectedEventID }) { return event }
+        return model.events.first
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if let event = selectedEvent {
+                    EventReportView(event: event)
+                } else {
+                    ContentUnavailableView("Nessun rendiconto", systemImage: "chart.bar", description: Text("Crea un evento per visualizzare statistiche e incassi."))
+                }
+            }
+            .navigationTitle("Rendiconto")
+            .toolbar {
+                if !model.events.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            ForEach(model.events) { event in
+                                Button {
+                                    selectedEventID = event.id
+                                } label: {
+                                    if selectedEvent?.id == event.id { Label(event.name, systemImage: "checkmark") }
+                                    else { Text(event.name) }
+                                }
+                            }
+                        } label: { Label("Evento", systemImage: "calendar") }
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct EventReportView: View {
+    @EnvironmentObject var model: AppModel
+    let event: PREvent
+
+    private var guests: [Guest] { model.guestsByEvent[event.id] ?? [] }
+    private var entered: [Guest] { guests.filter(\.entered) }
+    private var absentCount: Int { max(0, guests.count - entered.count) }
+    private var attendance: Double { guests.isEmpty ? 0 : (Double(entered.count) / Double(guests.count)) * 100 }
+    private var listValue: Double { guests.reduce(0) { $0 + $1.price } }
+    private var collected: Double { guests.reduce(0) { $0 + min($1.deposit, $1.price) } }
+    private var remaining: Double { guests.reduce(0) { $0 + $1.remaining } }
+    private var packages: [(name: String, guests: [Guest])] {
+        Dictionary(grouping: guests) { $0.packageName.isEmpty ? "Senza pacchetto" : $0.packageName }
+            .map { (name: $0.key, guests: $0.value) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                PremiumCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(event.name).font(.title2.bold())
+                        Label(event.venue, systemImage: "mappin.and.ellipse")
+                        Label(event.date.formatted(date: .long, time: .shortened), systemImage: "calendar")
+                    }
+                }
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                    ReportMetric(title: "In lista", value: "\(guests.count)", icon: "person.3.fill")
+                    ReportMetric(title: "Entrati", value: "\(entered.count)", icon: "checkmark.circle.fill")
+                    ReportMetric(title: "Assenti", value: "\(absentCount)", icon: "person.crop.circle.badge.xmark")
+                    ReportMetric(title: "Affluenza", value: String(format: "%.0f%%", attendance), icon: "chart.line.uptrend.xyaxis")
+                    ReportMetric(title: "Valore lista", value: listValue.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill")
+                    ReportMetric(title: "Incassato", value: collected.formatted(.currency(code: "EUR")), icon: "banknote.fill")
+                    ReportMetric(title: "Da riscuotere", value: remaining.formatted(.currency(code: "EUR")), icon: "clock.badge.exclamationmark")
+                }
+
+                Text("Riepilogo pacchetti").font(.title2.bold())
+                if packages.isEmpty {
+                    ContentUnavailableView("Nessun pacchetto", systemImage: "ticket")
+                } else {
+                    ForEach(packages, id: \.name) { package in
+                        PremiumCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Text(package.name).font(.headline)
+                                    Spacer()
+                                    Text("\(package.guests.count) clienti").foregroundStyle(.secondary)
+                                }
+                                Divider()
+                                LabeledContent("Entrati", value: "\(package.guests.filter(\.entered).count)")
+                                LabeledContent("Valore", value: package.guests.reduce(0) { $0 + $1.price }.formatted(.currency(code: "EUR")))
+                                LabeledContent("Incassato", value: package.guests.reduce(0) { $0 + min($1.deposit, $1.price) }.formatted(.currency(code: "EUR")))
+                            }
+                        }
+                    }
+                }
+            }.padding(20)
+        }
+    }
+}
+
+struct ReportMetric: View {
+    let title: String
+    let value: String
+    let icon: String
+    var body: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 10) {
+                Image(systemName: icon).font(.title2).foregroundStyle(Color.appPurple)
+                Text(value).font(.title2.bold()).minimumScaleFactor(0.7)
+                Text(title).font(.caption).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+}
+
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var showReset = false
@@ -155,13 +277,13 @@ struct SettingsView: View {
                     Button("Copia codice") { UIPasteboard.general.string = model.profile?.code }
                 }
                 Section("Aspetto") {
-                    Picker("Tema", selection: Binding(get: { model.theme }, set: { model.updateTheme($0) })) {
+                    Picker("Tema", selection: Binding(get: { model.theme }, set: model.updateTheme)) {
                         ForEach(AppModel.AppTheme.allCases) { Text($0.rawValue).tag($0) }
                     }
                 }
-                Section("Dati") {
-                    LabeledContent("Salvataggio", value: "Locale sul dispositivo")
-                    Text("Questa build non richiede CloudKit e può essere archiviata e inviata ad App Store Connect senza container iCloud.").font(.footnote).foregroundStyle(.secondary)
+                Section("Sincronizzazione") {
+                    Toggle("CloudKit", isOn: Binding(get: { model.syncEnabled }, set: model.updateSync))
+                    Text("La sincronizzazione tra dispositivi richiede iCloud attivo e il container CloudKit configurato nel progetto.").font(.footnote).foregroundStyle(.secondary)
                 }
                 Section {
                     Button("Esci dall’account", role: .destructive) { model.logout() }
@@ -187,91 +309,6 @@ struct NewEventView: View {
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
             }.navigationTitle("Nuovo evento")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
-        }
-    }
-}
-
-
-struct ReportsView: View {
-    @EnvironmentObject var model: AppModel
-    @State private var selectedEventID: UUID?
-
-    private var event: PREvent? {
-        if let id = selectedEventID { return model.events.first(where: { $0.id == id }) }
-        return model.events.sorted { $0.date > $1.date }.first
-    }
-    private var guests: [Guest] { event.map { model.guestsByEvent[$0.id] ?? [] } ?? [] }
-    private var entered: [Guest] { guests.filter(\.entered) }
-    private var totalValue: Double { guests.reduce(0) { $0 + $1.price } }
-    private var collected: Double { guests.reduce(0) { $0 + min($1.deposit, $1.price) } }
-    private var remaining: Double { guests.reduce(0) { $0 + $1.remaining } }
-    private var attendance: Int { guests.isEmpty ? 0 : Int((Double(entered.count) / Double(guests.count) * 100).rounded()) }
-    private var packages: [(String, Int, Double)] {
-        Dictionary(grouping: guests, by: { $0.packageName.isEmpty ? "Ingresso" : $0.packageName })
-            .map { ($0.key, $0.value.count, $0.value.reduce(0) { $0 + $1.price }) }
-            .sorted { $0.1 > $1.1 }
-    }
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    if model.events.isEmpty {
-                        ContentUnavailableView("Nessun rendiconto", systemImage: "chart.bar", description: Text("Crea un evento e aggiungi i clienti."))
-                    } else {
-                        Picker("Evento", selection: Binding(get: { selectedEventID ?? event?.id }, set: { selectedEventID = $0 })) {
-                            ForEach(model.events) { Text($0.name).tag(Optional($0.id)) }
-                        }.pickerStyle(.menu)
-
-                        if let event {
-                            PremiumCard {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(event.name).font(.title2.bold())
-                                    Text("\(event.venue) • \(event.date.formatted(date: .long, time: .shortened))").foregroundStyle(.secondary)
-                                }.frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 155), spacing: 12)], spacing: 12) {
-                                ReportMetric(title: "In lista", value: "\(guests.count)", icon: "person.3.fill")
-                                ReportMetric(title: "Entrati", value: "\(entered.count)", icon: "checkmark.circle.fill")
-                                ReportMetric(title: "Assenti", value: "\(guests.count - entered.count)", icon: "person.crop.circle.badge.xmark")
-                                ReportMetric(title: "Affluenza", value: "\(attendance)%", icon: "chart.line.uptrend.xyaxis")
-                                ReportMetric(title: "Valore totale", value: totalValue.formatted(.currency(code: "EUR")), icon: "eurosign.circle.fill")
-                                ReportMetric(title: "Incassato", value: collected.formatted(.currency(code: "EUR")), icon: "banknote.fill")
-                                ReportMetric(title: "Da riscuotere", value: remaining.formatted(.currency(code: "EUR")), icon: "clock.badge.exclamationmark")
-                            }
-
-                            if !packages.isEmpty {
-                                Text("Riepilogo pacchetti").font(.title3.bold())
-                                PremiumCard {
-                                    VStack(spacing: 0) {
-                                        ForEach(Array(packages.enumerated()), id: \.offset) { index, item in
-                                            HStack {
-                                                VStack(alignment: .leading) { Text(item.0).font(.headline); Text("\(item.1) clienti").font(.caption).foregroundStyle(.secondary) }
-                                                Spacer(); Text(item.2.formatted(.currency(code: "EUR"))).fontWeight(.semibold)
-                                            }.padding(.vertical, 12)
-                                            if index < packages.count - 1 { Divider() }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }.padding(20).frame(maxWidth: 900)
-            }.navigationTitle("Rendiconto")
-        }
-    }
-}
-
-struct ReportMetric: View {
-    let title: String; let value: String; let icon: String
-    var body: some View {
-        PremiumCard {
-            HStack(spacing: 12) {
-                Image(systemName: icon).font(.title2).foregroundStyle(Color.appPurple)
-                VStack(alignment: .leading, spacing: 3) { Text(value).font(.title3.bold()); Text(title).font(.caption).foregroundStyle(.secondary) }
-                Spacer()
-            }
         }
     }
 }

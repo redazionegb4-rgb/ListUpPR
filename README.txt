@@ -1,16 +1,19 @@
-GUESTLY PR — BUILD 5 CORRETTA
+GUESTLY PR - BUILD 2
 
-Correzioni principali:
-- Rimossi entitlement e container CloudKit non configurati, che potevano bloccare "Prepare Build for App Store Connect".
-- Build incrementata a 5.
-- Eliminati gli avvisi Swift relativi alle closure @MainActor nelle impostazioni.
-- Compatibilità iPhone e iPad mantenuta.
-- Rendiconto, eventi, clienti e modalità ingresso invariati.
+Aprire ListUpPR.xcodeproj con Xcode.
+In Signing & Capabilities selezionare il proprio Team Apple.
 
-APERTURA:
-1. Apri ListUpPR.xcodeproj.
-2. Seleziona il target ListUpPR > Signing & Capabilities.
-3. Scegli il tuo Team e verifica il Bundle Identifier.
-4. Product > Archive.
+Novità:
+- Grafica completamente rifatta
+- Nuova icona
+- Codice PR numerico di 3 cifre
+- Registrazione PR con password
+- Accesso PR con codice + password
+- Accesso addetto con solo codice
+- Home con statistiche
+- Eventi, clienti e impostazioni separati
+- Tema automatico, chiaro e scuro
+- Gestione clienti, pacchetti, acconti e ingressi
 
-Questa build usa salvataggio locale e non richiede la capability iCloud/CloudKit.
+Nota tecnica:
+La build salva e aggiorna correttamente i dati sul dispositivo. Il progetto contiene già entitlement e opzione CloudKit, ma per la sincronizzazione reale tra due iPhone occorre configurare e attivare il container iCloud nel proprio account Developer e completare lo schema CloudKit.
