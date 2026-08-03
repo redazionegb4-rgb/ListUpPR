@@ -1,43 +1,265 @@
 // !$*UTF8*$!
 {
- archiveVersion = 1;
- classes = {};
- objectVersion = 60;
- objects = {
-  A00000000000000000000001 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = 1; LastSwiftUpdateCheck = 1600; LastUpgradeCheck = 1600; TargetAttributes = {A00000000000000000000002 = {CreatedOnToolsVersion = 16.0;};};}; buildConfigurationList = A00000000000000000000003; compatibilityVersion = "Xcode 15.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base, it); mainGroup = A00000000000000000000004; productRefGroup = A00000000000000000000005; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000002,);};
-  A00000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000006; buildPhases = (A00000000000000000000007, A00000000000000000000008, A00000000000000000000009); buildRules = (); dependencies = (); name = ListUpPR; productName = ListUpPR; productReference = A0000000000000000000000A; productType = "com.apple.product-type.application";};
-  A00000000000000000000003 = {isa = XCConfigurationList; buildConfigurations = (A0000000000000000000000B, A0000000000000000000000C); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
-  A00000000000000000000004 = {isa = PBXGroup; children = (A0000000000000000000000D, A00000000000000000000005); sourceTree = "<group>";};
-  A00000000000000000000005 = {isa = PBXGroup; children = (A0000000000000000000000A); name = Products; sourceTree = "<group>";};
-  A00000000000000000000006 = {isa = XCConfigurationList; buildConfigurations = (A0000000000000000000000E, A0000000000000000000000F); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
-  A00000000000000000000007 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000020,A00000000000000000000021,A00000000000000000000022,A00000000000000000000023,A00000000000000000000024,A00000000000000000000025,A00000000000000000000026,A00000000000000000000027); runOnlyForDeploymentPostprocessing = 0;};
-  A00000000000000000000008 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
-  A00000000000000000000009 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000028); runOnlyForDeploymentPostprocessing = 0;};
-  A0000000000000000000000A = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListUpPR.app; sourceTree = BUILT_PRODUCTS_DIR;};
-  A0000000000000000000000B = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0;}; name = Debug;};
-  A0000000000000000000000C = {isa = XCBuildConfiguration; buildSettings = {ALWAYS_SEARCH_USER_PATHS = NO; CLANG_ENABLE_MODULES = YES; CLANG_ENABLE_OBJC_ARC = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0;}; name = Release;};
-  A0000000000000000000000D = {isa = PBXGroup; children = (A00000000000000000000010,A00000000000000000000011,A00000000000000000000012,A00000000000000000000013,A00000000000000000000014,A00000000000000000000015,A00000000000000000000016,A00000000000000000000017,A00000000000000000000018,A00000000000000000000019); path = ListUpPR; sourceTree = "<group>";};
-  A0000000000000000000000E = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = ListUpPR/ListUpPR.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "ListUp PR"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.dmb.ListUpPR; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Debug;};
-  A0000000000000000000000F = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor; CODE_SIGN_ENTITLEMENTS = ListUpPR/ListUpPR.entitlements; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; DEVELOPMENT_TEAM = ""; GENERATE_INFOPLIST_FILE = YES; INFOPLIST_KEY_CFBundleDisplayName = "ListUp PR"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES; INFOPLIST_KEY_UILaunchScreen_Generation = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; MARKETING_VERSION = 1.0; PRODUCT_BUNDLE_IDENTIFIER = com.dmb.ListUpPR; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_EMIT_LOC_STRINGS = YES; SWIFT_VERSION = 5.0; TARGETED_DEVICE_FAMILY = "1,2";}; name = Release;};
-  A00000000000000000000010 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListUpPRApp.swift; sourceTree = "<group>";};
-  A00000000000000000000011 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>";};
-  A00000000000000000000012 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>";};
-  A00000000000000000000013 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>";};
-  A00000000000000000000014 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>";};
-  A00000000000000000000015 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDashboardView.swift; sourceTree = "<group>";};
-  A00000000000000000000016 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailView.swift; sourceTree = "<group>";};
-  A00000000000000000000017 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntranceDashboardView.swift; sourceTree = "<group>";};
-  A00000000000000000000018 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>";};
-  A00000000000000000000019 = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ListUpPR.entitlements; sourceTree = "<group>";};
-  A00000000000000000000020 = {isa = PBXBuildFile; fileRef = A00000000000000000000010;};
-  A00000000000000000000021 = {isa = PBXBuildFile; fileRef = A00000000000000000000011;};
-  A00000000000000000000022 = {isa = PBXBuildFile; fileRef = A00000000000000000000012;};
-  A00000000000000000000023 = {isa = PBXBuildFile; fileRef = A00000000000000000000013;};
-  A00000000000000000000024 = {isa = PBXBuildFile; fileRef = A00000000000000000000014;};
-  A00000000000000000000025 = {isa = PBXBuildFile; fileRef = A00000000000000000000015;};
-  A00000000000000000000026 = {isa = PBXBuildFile; fileRef = A00000000000000000000016;};
-  A00000000000000000000027 = {isa = PBXBuildFile; fileRef = A00000000000000000000017;};
-  A00000000000000000000028 = {isa = PBXBuildFile; fileRef = A00000000000000000000018;};
- };
- rootObject = A00000000000000000000001;
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A00000000000000000000020 /* ListUpPRApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000010 /* ListUpPRApp.swift */; };
+		A00000000000000000000021 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* AppModel.swift */; };
+		A00000000000000000000022 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* Theme.swift */; };
+		A00000000000000000000023 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* RootView.swift */; };
+		A00000000000000000000024 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000014 /* WelcomeView.swift */; };
+		A00000000000000000000025 /* PRDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* PRDashboardView.swift */; };
+		A00000000000000000000026 /* EventDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* EventDetailView.swift */; };
+		A00000000000000000000027 /* EntranceDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* EntranceDashboardView.swift */; };
+		A00000000000000000000028 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A0000000000000000000000A /* ListUpPR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListUpPR.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000010 /* ListUpPRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListUpPRApp.swift; sourceTree = "<group>"; };
+		A00000000000000000000011 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000012 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		A00000000000000000000013 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A00000000000000000000014 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		A00000000000000000000015 /* PRDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRDashboardView.swift; sourceTree = "<group>"; };
+		A00000000000000000000016 /* EventDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDetailView.swift; sourceTree = "<group>"; };
+		A00000000000000000000017 /* EntranceDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntranceDashboardView.swift; sourceTree = "<group>"; };
+		A00000000000000000000018 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A00000000000000000000019 /* ListUpPR.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ListUpPR.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000004 = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000000D /* ListUpPR */,
+				A00000000000000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A0000000000000000000000A /* ListUpPR.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A0000000000000000000000D /* ListUpPR */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000010 /* ListUpPRApp.swift */,
+				A00000000000000000000011 /* AppModel.swift */,
+				A00000000000000000000012 /* Theme.swift */,
+				A00000000000000000000013 /* RootView.swift */,
+				A00000000000000000000014 /* WelcomeView.swift */,
+				A00000000000000000000015 /* PRDashboardView.swift */,
+				A00000000000000000000016 /* EventDetailView.swift */,
+				A00000000000000000000017 /* EntranceDashboardView.swift */,
+				A00000000000000000000018 /* Assets.xcassets */,
+				A00000000000000000000019 /* ListUpPR.entitlements */,
+			);
+			path = ListUpPR;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000002 /* ListUpPR */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000006 /* Build configuration list for PBXNativeTarget "ListUpPR" */;
+			buildPhases = (
+				A00000000000000000000007 /* Sources */,
+				A00000000000000000000008 /* Frameworks */,
+				A00000000000000000000009 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ListUpPR;
+			productName = ListUpPR;
+			productReference = A0000000000000000000000A /* ListUpPR.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A00000000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A00000000000000000000003 /* Build configuration list for PBXProject "ListUpPR" */;
+			compatibilityVersion = "Xcode 15.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+				it,
+			);
+			mainGroup = A00000000000000000000004;
+			productRefGroup = A00000000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A00000000000000000000002 /* ListUpPR */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A00000000000000000000009 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000028 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000007 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A00000000000000000000020 /* ListUpPRApp.swift in Sources */,
+				A00000000000000000000021 /* AppModel.swift in Sources */,
+				A00000000000000000000022 /* Theme.swift in Sources */,
+				A00000000000000000000023 /* RootView.swift in Sources */,
+				A00000000000000000000024 /* WelcomeView.swift in Sources */,
+				A00000000000000000000025 /* PRDashboardView.swift in Sources */,
+				A00000000000000000000026 /* EventDetailView.swift in Sources */,
+				A00000000000000000000027 /* EntranceDashboardView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A0000000000000000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A0000000000000000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A0000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ListUpPR/ListUpPR.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B8SC92LPR5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ListUp PR";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dmb.ListUpPR;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A0000000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ListUpPR/ListUpPR.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = B8SC92LPR5;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ListUp PR";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dmb.ListUpPR;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000003 /* Build configuration list for PBXProject "ListUpPR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0000000000000000000000B /* Debug */,
+				A0000000000000000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000006 /* Build configuration list for PBXNativeTarget "ListUpPR" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0000000000000000000000E /* Debug */,
+				A0000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000001 /* Project object */;
 }
