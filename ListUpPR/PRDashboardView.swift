@@ -220,6 +220,8 @@ struct EmptyEventCard: View {
 struct EventsView: View {
     @EnvironmentObject var model: AppModel
     @State private var showNewEvent = false
+    @State private var editingEvent: PREvent?
+    @State private var deletingEvent: PREvent?
 
     var body: some View {
         NavigationStack {
@@ -292,6 +294,23 @@ struct EventsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
+            .sheet(item: $editingEvent) { EditEventView(event: $0) }
+            .confirmationDialog(
+                "Gestisci evento",
+                isPresented: Binding(
+                    get: { deletingEvent != nil },
+                    set: { if !$0 { deletingEvent = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Elimina definitivamente", role: .destructive) {
+                    if let event = deletingEvent { model.deleteEvent(event) }
+                    deletingEvent = nil
+                }
+                Button("Annulla", role: .cancel) { deletingEvent = nil }
+            } message: {
+                Text(deletingEvent.map { "Vuoi eliminare l’evento \($0.name) e tutti i clienti collegati?" } ?? "")
+            }
         }
     }
 
@@ -300,54 +319,79 @@ struct EventsView: View {
         let entered = guests.filter(\.entered).count
         let progress = guests.isEmpty ? 0.0 : Double(entered) / Double(guests.count)
 
-        return NavigationLink(value: event) {
-            PremiumCard {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(LinearGradient(colors: past ? [.gray, .secondary] : [Color.appCyan, .mint], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            Image(systemName: past ? "clock.arrow.circlepath" : "calendar.badge.clock")
-                                .font(.system(size: 25, weight: .bold))
-                                .foregroundStyle(.white)
+        return ZStack(alignment: .topTrailing) {
+            NavigationLink(value: event) {
+                PremiumCard {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                    .fill(LinearGradient(colors: past ? [.gray, .secondary] : [Color.appCyan, .mint], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                Image(systemName: past ? "clock.arrow.circlepath" : "calendar.badge.clock")
+                                    .font(.system(size: 25, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                            .frame(width: 60, height: 60)
+
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(event.name)
+                                    .font(.title3.bold())
+                                Text(event.venue)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Text(italianEventDateTime(event.date))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Color.clear.frame(width: 42, height: 42)
                         }
-                        .frame(width: 60, height: 60)
 
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(event.name)
-                                .font(.title3.bold())
-                            Text(event.venue)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text(italianEventDateTime(event.date))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        ProgressView(value: progress)
+                            .tint(past ? .gray : .appCyan)
+
+                        HStack {
+                            Label("\(guests.count) in lista", systemImage: "person.2.fill")
+                            Spacer()
+                            Label("\(entered) entrati", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(past ? Color.secondary : Color.green)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
+                        .font(.subheadline.bold())
                     }
-
-                    ProgressView(value: progress)
-                        .tint(past ? .gray : .appCyan)
-
-                    HStack {
-                        Label("\(guests.count) in lista", systemImage: "person.2.fill")
-                        Spacer()
-                        Label("\(entered) entrati", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(past ? Color.secondary : Color.green)
-                    }
-                    .font(.subheadline.bold())
                 }
             }
+            .buttonStyle(.plain)
+
+            Menu {
+                Button { editingEvent = event } label: {
+                    Label("Modifica evento", systemImage: "pencil")
+                }
+                Button { _ = model.duplicateEvent(event) } label: {
+                    Label("Duplica evento", systemImage: "plus.square.on.square")
+                }
+                Divider()
+                Button(role: .destructive) { deletingEvent = event } label: {
+                    Label("Elimina evento", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle.fill")
+                    .font(.system(size: 25, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Color.appCyan)
+                    .frame(width: 44, height: 44)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 14)
+            .padding(.trailing, 14)
         }
-        .buttonStyle(.plain)
         .contextMenu {
+            Button { editingEvent = event } label: { Label("Modifica evento", systemImage: "pencil") }
             Button { _ = model.duplicateEvent(event) } label: { Label("Duplica evento", systemImage: "plus.square.on.square") }
-            Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina evento", systemImage: "trash") }
+            Button(role: .destructive) { deletingEvent = event } label: { Label("Elimina evento", systemImage: "trash") }
         }
     }
+
 }
 
 struct AllGuestsView: View {
@@ -692,6 +736,66 @@ struct NewEventView: View {
                             dismiss()
                         } label: {
                             Label("Crea evento", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(20)
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) {
+                FixedModalHeader(title: "", onClose: { dismiss() })
+            }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+    }
+}
+
+
+struct EditEventView: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) var dismiss
+    let originalEvent: PREvent
+
+    @State private var name: String
+    @State private var venue: String
+    @State private var date: Date
+
+    init(event: PREvent) {
+        originalEvent = event
+        _name = State(initialValue: event.name)
+        _venue = State(initialValue: event.venue)
+        _date = State(initialValue: event.date)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        FormHero(icon: "pencil.and.list.clipboard", title: "Modifica evento", subtitle: "Aggiorna i dettagli della serata")
+
+                        ModernFormCard(title: "Informazioni evento", icon: "calendar") {
+                            ModernTextField(title: "Nome serata", placeholder: "Es. White Party", text: $name, icon: "sparkles")
+                            ModernTextField(title: "Locale", placeholder: "Es. Le Capannine", text: $venue, icon: "mappin.and.ellipse")
+                        }
+
+                        ModernFormCard(title: "Data e orario", icon: "clock") {
+                            DatePicker("Quando si svolge", selection: $date)
+                                .datePickerStyle(.graphical)
+                                .environment(\.locale, Locale(identifier: "it_IT"))
+                        }
+
+                        Button {
+                            var updated = originalEvent
+                            updated.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                            updated.venue = venue.trimmingCharacters(in: .whitespacesAndNewlines)
+                            updated.date = date
+                            model.updateEvent(updated)
+                            dismiss()
+                        } label: {
+                            Label("Salva modifiche", systemImage: "checkmark.circle.fill")
                         }
                         .buttonStyle(PrimaryButtonStyle())
                         .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

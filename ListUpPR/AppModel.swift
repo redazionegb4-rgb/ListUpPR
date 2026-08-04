@@ -173,6 +173,12 @@ final class AppModel: ObservableObject {
         save()
     }
 
+    func updateEvent(_ event: PREvent) {
+        guard let index = events.firstIndex(where: { $0.id == event.id }) else { return }
+        events[index] = event
+        save()
+    }
+
     func deleteEvent(_ event: PREvent) {
         events.removeAll { $0.id == event.id }
         guestsByEvent[event.id] = nil
