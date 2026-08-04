@@ -42,6 +42,17 @@ struct PRDashboardView: View {
             }
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        model.refreshFromStorage()
+                    } label: {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.title3)
+                    }
+                    .accessibilityLabel("Aggiorna dati")
+                }
+            }
         }
     }
 
@@ -252,34 +263,181 @@ struct AllGuestsView: View {
 struct SettingsView: View {
     @EnvironmentObject var model: AppModel
     @State private var showReset = false
+    @State private var showPassword = false
+    @State private var showName = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        profileCard
+                        appearanceCard
+                        syncCard
+                        statsCard
+                        securityCard
+                        accountCard
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Impostazioni")
+            .navigationBarTitleDisplayMode(.large)
+            .sheet(isPresented: $showPassword) { ChangePasswordView() }
+            .sheet(isPresented: $showName) { ChangePRNameView() }
+            .confirmationDialog("Cancellare tutti i dati?", isPresented: $showReset, titleVisibility: .visible) {
+                Button("Cancella definitivamente", role: .destructive) { model.resetAllData() }
+            } message: {
+                Text("Verranno eliminati profilo, eventi e clienti salvati su questo dispositivo.")
+            }
+        }
+    }
+
+    private var profileCard: some View {
+        PremiumCard {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle().fill(LinearGradient(colors: [.appPurple, .appPink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    Text(String((model.profile?.name ?? "P").prefix(1)).uppercased()).font(.title.bold()).foregroundStyle(.white)
+                }.frame(width: 62, height: 62)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(model.profile?.name ?? "PR").font(.title3.bold())
+                    Text("Profilo organizzatore").font(.caption).foregroundStyle(.secondary)
+                    Text("Codice: \(model.profile?.code ?? "---")").font(.subheadline.bold().monospacedDigit()).foregroundStyle(Color.appCyan)
+                }
+                Spacer()
+                Menu {
+                    Button { showName = true } label: { Label("Modifica nome", systemImage: "pencil") }
+                    Button { UIPasteboard.general.string = model.profile?.code } label: { Label("Copia codice", systemImage: "doc.on.doc") }
+                } label: {
+                    Image(systemName: "ellipsis.circle.fill").font(.title2).foregroundStyle(Color.appPurple)
+                }
+            }
+        }
+    }
+
+    private var appearanceCard: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Aspetto", systemImage: "paintpalette.fill").font(.headline)
+                Text("La grafica principale è ottimizzata per il tema scuro.").font(.caption).foregroundStyle(.secondary)
+                Picker("Tema", selection: Binding(get: { model.theme }, set: model.updateTheme)) {
+                    ForEach(AppModel.AppTheme.allCases) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented)
+            }
+        }
+    }
+
+    private var syncCard: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Label("Sincronizzazione", systemImage: "icloud.fill").font(.headline)
+                    Spacer()
+                    Circle().fill(model.syncEnabled ? Color.green : Color.gray).frame(width: 9, height: 9)
+                    Text(model.syncEnabled ? "Attiva" : "Disattiva").font(.caption.bold()).foregroundStyle(.secondary)
+                }
+                Toggle("CloudKit", isOn: Binding(get: { model.syncEnabled }, set: model.updateSync))
+                Button {
+                    model.refreshFromStorage()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Aggiorna adesso")
+                        Spacer()
+                        Text(model.lastRefresh.formatted(date: .omitted, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.borderedProminent).tint(.appPurple)
+                Text("Aggiorna manualmente le liste per visualizzare gli ingressi registrati dagli altri dispositivi.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var statsCard: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("Riepilogo app", systemImage: "chart.bar.fill").font(.headline)
+                HStack(spacing: 10) {
+                    settingMetric("\(model.events.count)", "Eventi", "calendar")
+                    settingMetric("\(model.totalPeople)", "Clienti", "person.2.fill")
+                    settingMetric("\(model.enteredPeople)", "Entrati", "checkmark.circle.fill")
+                }
+            }
+        }
+    }
+
+    private func settingMetric(_ value: String, _ title: String, _ icon: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon).foregroundStyle(Color.appCyan)
+            Text(value).font(.title2.bold().monospacedDigit())
+            Text(title).font(.caption2).foregroundStyle(.secondary)
+        }.frame(maxWidth: .infinity).padding(.vertical, 12).background(.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 15))
+    }
+
+    private var securityCard: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Sicurezza", systemImage: "lock.shield.fill").font(.headline)
+                Button { showPassword = true } label: {
+                    Label("Cambia password di accesso", systemImage: "key.fill").frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+                Text("Condividi il codice a 3 cifre soltanto con gli addetti autorizzati.").font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var accountCard: some View {
+        PremiumCard {
+            VStack(spacing: 12) {
+                Button { model.logout() } label: { Label("Esci dall’account", systemImage: "rectangle.portrait.and.arrow.right") }
+                    .buttonStyle(.bordered).tint(.orange).frame(maxWidth: .infinity)
+                Button(role: .destructive) { showReset = true } label: { Label("Cancella tutti i dati", systemImage: "trash.fill") }
+                    .buttonStyle(.bordered).frame(maxWidth: .infinity)
+            }
+        }
+    }
+}
+
+struct ChangePasswordView: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) var dismiss
+    @State private var password = ""
+    @State private var confirmation = ""
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Profilo PR") {
-                    LabeledContent("Nome", value: model.profile?.name ?? "-")
-                    LabeledContent("Codice", value: model.profile?.code ?? "-")
-                    Button("Copia codice") { UIPasteboard.general.string = model.profile?.code }
+                Section("Nuova password") {
+                    SecureField("Almeno 4 caratteri", text: $password)
+                    SecureField("Ripeti password", text: $confirmation)
                 }
-                Section("Aspetto") {
-                    Picker("Tema", selection: Binding(get: { model.theme }, set: model.updateTheme)) {
-                        ForEach(AppModel.AppTheme.allCases) { Text($0.rawValue).tag($0) }
-                    }
-                }
-                Section("Sincronizzazione") {
-                    Toggle("CloudKit", isOn: Binding(get: { model.syncEnabled }, set: model.updateSync))
-                    Text("La sincronizzazione tra dispositivi richiede iCloud attivo e il container CloudKit configurato nel progetto.").font(.footnote).foregroundStyle(.secondary)
-                }
-                Section("Sicurezza") {
-                    Text("Condividi il codice solo con gli addetti autorizzati alla serata.").font(.footnote).foregroundStyle(.secondary)
-                }
-                Section {
-                    Button("Esci dall’account", role: .destructive) { model.logout() }
-                    Button("Cancella tutti i dati", role: .destructive) { showReset = true }
-                }
-            }.navigationTitle("Impostazioni")
-            .confirmationDialog("Cancellare tutti i dati?", isPresented: $showReset, titleVisibility: .visible) {
-                Button("Cancella definitivamente", role: .destructive) { model.resetAllData() }
-            }
+                Button("Salva password") {
+                    model.updateProfile(password: password)
+                    dismiss()
+                }.disabled(password.count < 4 || password != confirmation)
+            }.navigationTitle("Cambia password")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+        }
+    }
+}
+
+struct ChangePRNameView: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) var dismiss
+    @State private var name = ""
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Nome PR", text: $name)
+                Button("Salva nome") { model.updateProfile(name: name); dismiss() }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }.navigationTitle("Modifica nome")
+            .onAppear { name = model.profile?.name ?? "" }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
 }

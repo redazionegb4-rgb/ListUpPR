@@ -90,9 +90,13 @@ struct EventDetailView: View {
 
             Section("Lista clienti") {
                 ForEach(filtered) { guest in
-                    GuestRow(guest: guest, entranceMode: entranceMode) {
-                        model.toggleEntry(guestID: guest.id, eventID: event.id)
-                    }
+                    GuestRow(
+                        guest: guest,
+                        entranceMode: entranceMode,
+                        toggle: { model.toggleEntry(guestID: guest.id, eventID: event.id) },
+                        edit: { editingGuest = guest },
+                        delete: { model.deleteGuest(guest, eventID: event.id) }
+                    )
                     .contextMenu {
                         if !entranceMode { Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") } }
                         if let phone = guest.phone, !phone.isEmpty {
@@ -128,7 +132,14 @@ struct EventDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Button {
+                    model.refreshFromStorage()
+                } label: {
+                    Image(systemName: "arrow.clockwise.circle.fill")
+                }
+                .accessibilityLabel("Aggiorna lista")
+
                 Menu {
                     if !entranceMode {
                         Button { showAdd = true } label: { Label("Aggiungi cliente", systemImage: "person.badge.plus") }
@@ -170,11 +181,17 @@ struct GuestRow: View {
     let guest: Guest
     let entranceMode: Bool
     let toggle: () -> Void
+    let edit: () -> Void
+    let delete: () -> Void
+
     var body: some View {
-        Button(action: toggle) {
-            HStack(spacing: 14) {
+        HStack(spacing: 14) {
+            Button(action: toggle) {
                 Image(systemName: guest.entered ? "checkmark.circle.fill" : "circle")
                     .font(.title2).foregroundStyle(guest.entered ? .green : .secondary)
+            }.buttonStyle(.plain)
+
+            Button(action: toggle) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(guest.fullName).font(.headline).foregroundStyle(.primary)
                     HStack(spacing: 7) {
@@ -191,9 +208,21 @@ struct GuestRow: View {
                         Text("Entrato alle \(entryTime.formatted(date: .omitted, time: .shortened))").font(.caption2).foregroundStyle(.green)
                     }
                 }
-                Spacer()
-            }.padding(.vertical, 6)
-        }.buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }.buttonStyle(.plain)
+
+            if !entranceMode {
+                Menu {
+                    Button(action: edit) { Label("Modifica cliente", systemImage: "pencil") }
+                    Button(role: .destructive, action: delete) { Label("Elimina cliente", systemImage: "trash") }
+                } label: {
+                    Image(systemName: "ellipsis.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(Color.appPurple)
+                        .padding(5)
+                }
+            }
+        }.padding(.vertical, 6)
     }
 }
 
@@ -201,35 +230,100 @@ struct AddGuestView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
     let eventID: UUID
-    @State private var first = ""; @State private var last = ""; @State private var phone = ""
-    @State private var listName = ""; @State private var packageName = "Ingresso"
-    @State private var price = 0.0; @State private var deposit = 0.0; @State private var notes = ""
+    @State private var first = ""
+    @State private var last = ""
+    @State private var phone = ""
+    @State private var listName = ""
+    @State private var packageName = "Ingresso standard"
+    @State private var priceText = ""
+    @State private var depositText = ""
+    @State private var notes = ""
     @State private var duplicateWarning = false
+
+    private var price: Double { Double(priceText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
+    private var deposit: Double { Double(depositText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Cliente") {
+                Section {
                     TextField("Nome", text: $first)
                     TextField("Cognome", text: $last)
-                    TextField("Telefono facoltativo", text: $phone).keyboardType(.phonePad)
+                    TextField("Numero di telefono (facoltativo)", text: $phone).keyboardType(.phonePad)
+                } header: {
+                    Text("Cliente")
+                } footer: {
+                    Text("Ogni nominativo corrisponde a una sola persona.")
                 }
-                Section("Prenotazione") {
-                    TextField("Nome lista", text: $listName)
-                    TextField("Pacchetto scelto", text: $packageName)
-                    TextField("Prezzo totale", value: $price, format: .number).keyboardType(.decimalPad)
-                    TextField("Acconto versato", value: $deposit, format: .number).keyboardType(.decimalPad)
-                    TextField("Note", text: $notes, axis: .vertical).lineLimit(2...5)
+
+                Section {
+                    TextField("Esempio: Lista Marco", text: $listName)
+                    TextField("Esempio: Ingresso + drink", text: $packageName)
+                    BookingAmountField(
+                        title: "Prezzo totale",
+                        explanation: "Costo completo dell’ingresso o del pacchetto",
+                        placeholder: "Es. 20,00",
+                        text: $priceText
+                    )
+                    BookingAmountField(
+                        title: "Acconto già versato",
+                        explanation: "Lascia vuoto se il cliente non ha pagato nulla",
+                        placeholder: "Es. 10,00",
+                        text: $depositText
+                    )
+                    TextField("Note: tavolo, accompagnatore, richieste…", text: $notes, axis: .vertical).lineLimit(2...5)
+                } header: {
+                    Text("Prenotazione")
+                } footer: {
+                    Text("Il saldo rimanente viene calcolato automaticamente: prezzo totale meno acconto.")
                 }
-                if duplicateWarning { Label("Esiste già un cliente con questo nome nell’evento.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
+
+                if duplicateWarning {
+                    Label("Esiste già un cliente con questo nome nell’evento.", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+
                 Button("Aggiungi cliente") {
-                    if model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) { duplicateWarning = true; return }
-                    let guest = Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: price, deposit: min(deposit, price), notes: notes, phone: phone)
-                    model.addGuest(guest, to: eventID); dismiss()
-                }.disabled(first.trimmingCharacters(in: .whitespaces).isEmpty)
-            }.navigationTitle("Nuovo cliente")
+                    if model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) {
+                        duplicateWarning = true
+                        return
+                    }
+                    let guest = Guest(
+                        firstName: first,
+                        lastName: last,
+                        listName: listName,
+                        packageName: packageName,
+                        price: max(0, price),
+                        deposit: min(max(0, deposit), max(0, price)),
+                        notes: notes,
+                        phone: phone
+                    )
+                    model.addGuest(guest, to: eventID)
+                    dismiss()
+                }
+                .disabled(first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+            .navigationTitle("Nuovo cliente")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
+    }
+}
+
+struct BookingAmountField: View {
+    let title: String
+    let explanation: String
+    let placeholder: String
+    @Binding var text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(title).font(.subheadline.weight(.semibold))
+            Text(explanation).font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Text("€").foregroundStyle(Color.appPurple).font(.headline)
+                TextField(placeholder, text: $text).keyboardType(.decimalPad)
+            }
+        }.padding(.vertical, 4)
     }
 }
 

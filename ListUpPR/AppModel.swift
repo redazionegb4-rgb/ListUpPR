@@ -51,6 +51,7 @@ final class AppModel: ObservableObject {
     @Published var theme: AppTheme = .dark
     @Published var syncEnabled = true
     @Published var lastEntry: (eventID: UUID, guestID: UUID)?
+    @Published var lastRefresh = Date()
 
     private let defaults = UserDefaults.standard
     private let encoder = JSONEncoder()
@@ -206,6 +207,22 @@ final class AppModel: ObservableObject {
     }
 
     func updateTheme(_ newTheme: AppTheme) { theme = newTheme; save() }
+
+    func refreshFromStorage() {
+        load()
+        lastRefresh = .now
+    }
+
+    func updateProfile(name: String? = nil, password: String? = nil) {
+        guard var current = profile else { return }
+        if let name {
+            let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty { current.name = clean }
+        }
+        if let password, password.count >= 4 { current.password = password }
+        profile = current
+        save()
+    }
     func updateSync(_ enabled: Bool) { syncEnabled = enabled; save() }
 
     func resetAllData() {
