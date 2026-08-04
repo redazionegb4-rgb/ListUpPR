@@ -305,6 +305,8 @@ struct QRScanResultView: View {
 
                     PremiumCard {
                         VStack(spacing: 15) {
+                            resultRow(icon: "person.fill", title: "Cliente", value: result.guestName.isEmpty ? "—" : result.guestName)
+                            Divider()
                             resultRow(icon: "person.crop.circle.badge.checkmark", title: "Nome PR", value: result.prName.isEmpty ? "—" : result.prName)
                             Divider()
                             resultRow(icon: "number", title: "Codice PR", value: result.prCode.isEmpty ? "—" : result.prCode)
