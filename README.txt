@@ -1,13 +1,15 @@
-ListUp PR – Build 31
+Guestly PR - Build 14
 
 Novità:
-- Recupero credenziali locale tramite PIN personale di 6 cifre.
-- PIN salvato nel Portachiavi di iOS, separato dai dati del profilo.
-- Alla registrazione vengono richiesti PIN e conferma PIN.
-- Nel login è disponibile “Hai dimenticato username o password?”.
-- Il PR può recuperare lo username e impostare una nuova password usando Nome PR/username + PIN.
-- Nelle Impostazioni è possibile impostare o modificare il PIN di recupero.
-- Nessun server, database o Accedi con Apple.
-- Nessuna nuova capability o modifica agli entitlements.
+- Accesso PR con username e password.
+- Registrazione PR completamente ridisegnata.
+- Login PR completamente ridisegnato.
+- Risultato scansione QR a schermo intero.
+- Pulsante Visualizza e condividi QR nella pagina Clienti.
+- Condivisione del QR come card immagine professionale.
+- QR personale, univoco e utilizzabile una sola volta.
+- Nome PR, codice PR, evento, pacchetto e prezzo visibili nella card.
 
-Nota: senza server, il recupero è garantito sul dispositivo in cui è stato configurato il PIN. La cancellazione completa dell’app o il cambio dispositivo possono rendere il PIN non disponibile.
+Firma, Bundle Identifier, CloudKit, entitlements e compatibilità iPhone/iPad invariati.
+
+Build 18: biglietto digitale ridisegnato, date italiane e nuove pagine evento/cliente.

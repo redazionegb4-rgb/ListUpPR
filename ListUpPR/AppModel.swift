@@ -1,48 +1,5 @@
 import Foundation
 import SwiftUI
-import Security
-
-
-private enum RecoveryPINStore {
-    private static let service = "com.dmb.ListUpPR.recoveryPIN"
-
-    static func save(_ pin: String, for username: String) -> Bool {
-        let account = username.lowercased()
-        delete(for: account)
-        guard let data = pin.data(using: .utf8) else { return false }
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        ]
-        return SecItemAdd(query as CFDictionary, nil) == errSecSuccess
-    }
-
-    static func pin(for username: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: username.lowercased(),
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
-
-    static func delete(for username: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: username.lowercased()
-        ]
-        SecItemDelete(query as CFDictionary)
-    }
-}
 
 struct PREvent: Identifiable, Codable, Hashable {
     var id = UUID()
@@ -148,10 +105,10 @@ final class AppModel: ObservableObject {
     var enteredPeople: Int { activeGuests.filter(\.entered).count }
     var activeEvent: PREvent? { upcomingEvents.first(where: { $0.isActive }) ?? upcomingEvents.first }
 
-    func registerPR(name: String, username: String, password: String, recoveryPIN: String) -> Bool {
+    func registerPR(name: String, username: String, password: String) -> Bool {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4, recoveryPIN.count == 6, recoveryPIN.allSatisfy(\.isNumber) else { return false }
+        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4 else { return false }
         commitActiveAccount()
         guard !accounts.contains(where: { $0.profile.loginUsername.lowercased() == cleanUsername }) else { return false }
         let usedCodes = Set(accounts.map { $0.profile.code })
@@ -165,10 +122,6 @@ final class AppModel: ObservableObject {
             createdAt: .now
         )
         accounts.append(account)
-        guard RecoveryPINStore.save(recoveryPIN, for: cleanUsername) else {
-            accounts.removeAll { $0.id == account.id }
-            return false
-        }
         activate(account)
         selectedRole = .pr
         save()
@@ -187,33 +140,6 @@ final class AppModel: ObservableObject {
         selectedRole = .pr
         save()
         return true
-    }
-
-    func recoverAccount(identifier: String, recoveryPIN: String, newPassword: String) -> String? {
-        let cleanIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let cleanPIN = recoveryPIN.filter(\.isNumber)
-        guard !cleanIdentifier.isEmpty, cleanPIN.count == 6, newPassword.count >= 4 else { return nil }
-
-        let matches = accounts.indices.filter { index in
-            let profile = accounts[index].profile
-            let usernameMatch = profile.loginUsername.lowercased() == cleanIdentifier
-            let nameMatch = profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == cleanIdentifier
-            return (usernameMatch || nameMatch) && RecoveryPINStore.pin(for: profile.loginUsername) == cleanPIN
-        }
-        guard matches.count == 1, let index = matches.first else { return nil }
-        accounts[index].profile.password = newPassword
-        persistAccounts()
-        return accounts[index].profile.loginUsername
-    }
-
-    func hasRecoveryPINForActiveProfile() -> Bool {
-        guard let username = profile?.loginUsername else { return false }
-        return RecoveryPINStore.pin(for: username) != nil
-    }
-
-    func updateRecoveryPIN(_ pin: String) -> Bool {
-        guard let username = profile?.loginUsername, pin.count == 6, pin.allSatisfy(\.isNumber) else { return false }
-        return RecoveryPINStore.save(pin, for: username)
     }
 
     func usernameIsAvailable(_ username: String) -> Bool {
@@ -450,10 +376,7 @@ final class AppModel: ObservableObject {
     func updateSync(_ enabled: Bool) { syncEnabled = enabled; save() }
 
     func resetAllData() {
-        if let activeAccountID, let account = accounts.first(where: { $0.id == activeAccountID }) {
-            RecoveryPINStore.delete(for: account.profile.loginUsername)
-            accounts.removeAll { $0.id == activeAccountID }
-        }
+        if let activeAccountID { accounts.removeAll { $0.id == activeAccountID } }
         profile = nil; selectedRole = nil; events = []; guestsByEvent = [:]; entranceCode = ""; activeAccountID = nil
         persistAccounts()
         savePreferences()

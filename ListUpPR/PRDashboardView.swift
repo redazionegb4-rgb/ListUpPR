@@ -517,7 +517,6 @@ struct SettingsView: View {
     @State private var showReset = false
     @State private var showPassword = false
     @State private var showName = false
-    @State private var showRecoveryPIN = false
 
     var body: some View {
         NavigationStack {
@@ -539,7 +538,6 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showPassword) { ChangePasswordView() }
             .sheet(isPresented: $showName) { ChangePRNameView() }
-            .sheet(isPresented: $showRecoveryPIN) { ChangeRecoveryPINView() }
             .alert("Cancellare tutti i dati?", isPresented: $showReset) {
                 Button("Annulla", role: .cancel) {}
                 Button("Cancella", role: .destructive) { model.resetAllData() }
@@ -639,12 +637,7 @@ struct SettingsView: View {
                     Label("Cambia password di accesso", systemImage: "key.fill").frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.bordered)
-                Button { showRecoveryPIN = true } label: {
-                    Label(model.hasRecoveryPINForActiveProfile() ? "Modifica PIN di recupero" : "Imposta PIN di recupero", systemImage: "number.square.fill")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.bordered)
-                Text("Usa username e password per accedere. Il PIN permette di reimpostare la password su questo dispositivo.").font(.caption).foregroundStyle(.secondary)
+                Text("Usa username e password per accedere in modo sicuro al tuo profilo PR.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -679,38 +672,6 @@ struct ChangePasswordView: View {
                     dismiss()
                 }.disabled(password.count < 4 || password != confirmation)
             }.navigationTitle("Cambia password")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
-        }
-    }
-}
-
-struct ChangeRecoveryPINView: View {
-    @EnvironmentObject var model: AppModel
-    @Environment(\.dismiss) var dismiss
-    @State private var pin = ""
-    @State private var confirmation = ""
-    @State private var error = false
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SecureField("6 cifre", text: $pin)
-                        .keyboardType(.numberPad)
-                    SecureField("Ripeti PIN", text: $confirmation)
-                        .keyboardType(.numberPad)
-                } header: {
-                    Text("PIN di recupero")
-                } footer: {
-                    Text("Conservalo in un luogo sicuro. Serve per recuperare username e reimpostare la password sul dispositivo.")
-                }
-                if error { Text("Impossibile salvare il PIN.").foregroundStyle(.red) }
-                Button("Salva PIN") {
-                    if model.updateRecoveryPIN(pin) { dismiss() } else { error = true }
-                }.disabled(pin.count != 6 || !pin.allSatisfy(\.isNumber) || pin != confirmation)
-            }
-            .navigationTitle("PIN di recupero")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
