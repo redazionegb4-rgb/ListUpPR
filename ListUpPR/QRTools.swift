@@ -4,8 +4,10 @@ import AVFoundation
 import AudioToolbox
 
 struct GuestQRPayload: Codable {
+    let version: Int
     let eventID: UUID
     let guestID: UUID
+    let token: UUID
     let prCode: String
 }
 
@@ -16,9 +18,9 @@ struct GuestQRCodeView: View {
     let prCode: String
 
     private var payload: String {
-        let value = GuestQRPayload(eventID: event.id, guestID: guest.id, prCode: prCode)
+        let value = GuestQRPayload(version: 2, eventID: event.id, guestID: guest.id, token: guest.effectiveQRToken, prCode: prCode)
         guard let data = try? JSONEncoder().encode(value) else { return "" }
-        return data.base64EncodedString()
+        return "LISTUPPR|2|" + data.base64EncodedString()
     }
 
     var body: some View {
@@ -49,8 +51,6 @@ struct GuestQRCodeView: View {
 
 struct QRCodeImage: View {
     let text: String
-    private let context = CIContext()
-    private let filter = CIFilter.qrCodeGenerator()
 
     var body: some View {
         if let image = makeImage() {
@@ -61,10 +61,14 @@ struct QRCodeImage: View {
     }
 
     private func makeImage() -> UIImage? {
+        guard !text.isEmpty else { return nil }
+        let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(text.utf8)
-        filter.correctionLevel = "M"
-        guard let output = filter.outputImage,
-              let cgImage = context.createCGImage(output.transformed(by: CGAffineTransform(scaleX: 12, y: 12)), from: output.extent) else { return nil }
+        filter.correctionLevel = "Q"
+        let context = CIContext(options: [.useSoftwareRenderer: false])
+        guard let output = filter.outputImage else { return nil }
+        let scaled = output.transformed(by: CGAffineTransform(scaleX: 14, y: 14))
+        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return nil }
         return UIImage(cgImage: cgImage)
     }
 }

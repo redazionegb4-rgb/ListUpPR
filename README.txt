@@ -1,12 +1,10 @@
-LISTUP PR — BUILD 8
+LISTUP PR – BUILD 10
 
-Novità:
-- Nuova palette dark premium senza viola: nero carbone, azzurro e verde acqua.
-- Pagina Clienti con pulsanti visibili Modifica ed Elimina per ogni nominativo.
-- Azioni Modifica/Elimina disponibili anche tramite swipe.
-- QR Code personale per ogni cliente.
-- Scanner QR nell’accesso Addetto all’ingresso.
-- Controllo QR errato, altro evento, altro PR e doppio ingresso.
-- Conferma automatica dell’orario di ingresso dopo la scansione.
+Correzioni:
+- QR Code versione 2 univoco per ogni cliente, con token personale e controllo evento/PR.
+- Pulsante Aggiungi cliente funzionante dalla Dashboard.
+- Nessun evento o cliente demo; rimossi automaticamente anche i vecchi eventi demo vuoti.
+- Conferme di eliminazione mostrate come alert centrati.
+- Compatibilità iPhone e iPad mantenuta.
 
-Configurazioni di firma, Bundle Identifier, CloudKit, entitlements e compatibilità iPhone/iPad mantenute.
+Aprire ListUpPR.xcodeproj con Xcode e selezionare il proprio Team in Signing & Capabilities.

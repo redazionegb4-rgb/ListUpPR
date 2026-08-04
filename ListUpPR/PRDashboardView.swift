@@ -15,6 +15,8 @@ struct PRMainView: View {
 struct PRDashboardView: View {
     @EnvironmentObject var model: AppModel
     @State private var showNewEvent = false
+    @State private var showAddGuest = false
+    @State private var targetEventID: UUID?
 
     private var waiting: Int { model.totalPeople - model.enteredPeople }
     private var progress: Double { model.totalPeople == 0 ? 0 : Double(model.enteredPeople) / Double(model.totalPeople) }
@@ -42,6 +44,9 @@ struct PRDashboardView: View {
             }
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
+            .sheet(isPresented: $showAddGuest) {
+                if let eventID = targetEventID { AddGuestView(eventID: eventID) }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -105,7 +110,12 @@ struct PRDashboardView: View {
         HStack(spacing: 12) {
             DashboardAction(icon: "calendar.badge.plus", title: "Nuovo evento") { showNewEvent = true }
             DashboardAction(icon: "person.badge.plus", title: "Aggiungi cliente") {
-                if model.events.isEmpty { showNewEvent = true }
+                if let event = model.activeEvent ?? model.events.sorted(by: { $0.date > $1.date }).first {
+                    targetEventID = event.id
+                    showAddGuest = true
+                } else {
+                    showNewEvent = true
+                }
             }
             DashboardAction(icon: "doc.on.doc", title: "Copia codice") { UIPasteboard.general.string = model.profile?.code }
         }
@@ -279,12 +289,14 @@ struct AllGuestsView: View {
                     EditGuestView(eventID: event.id, guest: guest)
                 }
             }
-            .confirmationDialog("Eliminare questo cliente?", isPresented: Binding(get: { deletingPair != nil }, set: { if !$0 { deletingPair = nil } }), titleVisibility: .visible) {
-                Button("Elimina definitivamente", role: .destructive) {
+            .alert("Eliminare il cliente?", isPresented: Binding(get: { deletingPair != nil }, set: { if !$0 { deletingPair = nil } })) {
+                Button("Annulla", role: .cancel) { deletingPair = nil }
+                Button("Elimina", role: .destructive) {
                     if let pair = deletingPair { model.deleteGuest(pair.guest, eventID: pair.event.id) }
                     deletingPair = nil
                 }
-                Button("Annulla", role: .cancel) { deletingPair = nil }
+            } message: {
+                Text(deletingPair.map { "\($0.guest.fullName) verrà eliminato dall’evento \($0.event.name)." } ?? "")
             }
         }
     }
@@ -322,8 +334,9 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showPassword) { ChangePasswordView() }
             .sheet(isPresented: $showName) { ChangePRNameView() }
-            .confirmationDialog("Cancellare tutti i dati?", isPresented: $showReset, titleVisibility: .visible) {
-                Button("Cancella definitivamente", role: .destructive) { model.resetAllData() }
+            .alert("Cancellare tutti i dati?", isPresented: $showReset) {
+                Button("Annulla", role: .cancel) {}
+                Button("Cancella", role: .destructive) { model.resetAllData() }
             } message: {
                 Text("Verranno eliminati profilo, eventi e clienti salvati su questo dispositivo.")
             }
@@ -339,7 +352,7 @@ struct SettingsView: View {
                 }.frame(width: 62, height: 62)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model.profile?.name ?? "PR").font(.title3.bold())
-                    Text("Profilo organizzatore").font(.caption).foregroundStyle(.secondary)
+                    Text("Profilo PR").font(.caption).foregroundStyle(.secondary)
                     Text("Codice: \(model.profile?.code ?? "---")").font(.subheadline.bold().monospacedDigit()).foregroundStyle(Color.appCyan)
                 }
                 Spacer()
@@ -357,7 +370,7 @@ struct SettingsView: View {
         PremiumCard {
             VStack(alignment: .leading, spacing: 14) {
                 Label("Aspetto", systemImage: "paintpalette.fill").font(.headline)
-                Text("La grafica principale è ottimizzata per il tema scuro.").font(.caption).foregroundStyle(.secondary)
+                Text("Scegli tema automatico, chiaro o scuro. Tutte le schermate si adattano completamente.").font(.caption).foregroundStyle(.secondary)
                 Picker("Tema", selection: Binding(get: { model.theme }, set: model.updateTheme)) {
                     ForEach(AppModel.AppTheme.allCases) { Text($0.rawValue).tag($0) }
                 }.pickerStyle(.segmented)

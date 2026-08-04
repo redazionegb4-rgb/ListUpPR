@@ -19,11 +19,13 @@ struct Guest: Identifiable, Codable, Hashable {
     var deposit: Double
     var notes: String
     var phone: String? = nil
+    var qrToken: UUID? = nil
     var entered: Bool = false
     var entryTime: Date? = nil
 
     var fullName: String { "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces) }
     var remaining: Double { max(0, price - deposit) }
+    var effectiveQRToken: UUID { qrToken ?? id }
 }
 
 struct PRProfile: Codable, Hashable {
@@ -57,7 +59,10 @@ final class AppModel: ObservableObject {
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    init() { load() }
+    init() {
+        load()
+        removeLegacyDemoDataIfNeeded()
+    }
 
     var allGuests: [Guest] { events.flatMap { guestsByEvent[$0.id] ?? [] } }
     var totalPeople: Int { allGuests.count }
@@ -70,7 +75,6 @@ final class AppModel: ObservableObject {
         let code = String(format: "%03d", Int.random(in: 100...999))
         profile = PRProfile(name: cleanName, code: code, password: password)
         selectedRole = .pr
-        seedFirstEventIfNeeded()
         save()
         return true
     }
@@ -133,6 +137,7 @@ final class AppModel: ObservableObject {
                 deposit: guest.deposit,
                 notes: guest.notes,
                 phone: guest.phone,
+                qrToken: UUID(),
                 entered: false,
                 entryTime: nil
             )
@@ -142,17 +147,23 @@ final class AppModel: ObservableObject {
     }
 
     func addGuest(_ guest: Guest, to eventID: UUID) {
-        guestsByEvent[eventID, default: []].append(guest)
+        var newGuest = guest
+        if newGuest.qrToken == nil { newGuest.qrToken = UUID() }
+        guestsByEvent[eventID, default: []].append(newGuest)
         save()
     }
 
     func checkInFromQRCode(_ encoded: String, expectedEventID: UUID) -> String {
-        guard let data = Data(base64Encoded: encoded),
-              let payload = try? decoder.decode(GuestQRPayload.self, from: data) else { return "QR non valido" }
+        let prefix = "LISTUPPR|2|"
+        guard encoded.hasPrefix(prefix),
+              let data = Data(base64Encoded: String(encoded.dropFirst(prefix.count))),
+              let payload = try? decoder.decode(GuestQRPayload.self, from: data),
+              payload.version == 2 else { return "QR non valido o non generato da ListUp PR" }
         guard payload.eventID == expectedEventID else { return "Il QR appartiene a un altro evento" }
         guard payload.prCode == profile?.code else { return "Il QR appartiene a un altro PR" }
         guard var guests = guestsByEvent[payload.eventID],
               let index = guests.firstIndex(where: { $0.id == payload.guestID }) else { return "Cliente non trovato" }
+        guard payload.token == guests[index].effectiveQRToken else { return "QR non valido per questo cliente" }
         if guests[index].entered { return "\(guests[index].fullName) risulta già entrato" }
         guests[index].entered = true
         guests[index].entryTime = .now
@@ -203,7 +214,7 @@ final class AppModel: ObservableObject {
 
     func copyGuests(from sourceEventID: UUID, to destinationEventID: UUID) {
         let copies = (guestsByEvent[sourceEventID] ?? []).map { guest in
-            Guest(firstName: guest.firstName, lastName: guest.lastName, listName: guest.listName, packageName: guest.packageName, price: guest.price, deposit: guest.deposit, notes: guest.notes, phone: guest.phone, entered: false, entryTime: nil)
+            Guest(firstName: guest.firstName, lastName: guest.lastName, listName: guest.listName, packageName: guest.packageName, price: guest.price, deposit: guest.deposit, notes: guest.notes, phone: guest.phone, qrToken: UUID(), entered: false, entryTime: nil)
         }
         guestsByEvent[destinationEventID, default: []].append(contentsOf: copies)
         save()
@@ -246,11 +257,14 @@ final class AppModel: ObservableObject {
         defaults.removePersistentDomain(forName: Bundle.main.bundleIdentifier ?? "ListUpPR")
     }
 
-    private func seedFirstEventIfNeeded() {
-        guard events.isEmpty else { return }
-        let event = PREvent(name: "Serata inaugurale", venue: "Nome discoteca", date: Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now)
-        events = [event]
-        guestsByEvent[event.id] = []
+    private func removeLegacyDemoDataIfNeeded() {
+        let demoIDs = events.filter {
+            $0.name == "Serata inaugurale" && $0.venue == "Nome discoteca" && (guestsByEvent[$0.id] ?? []).isEmpty
+        }.map(\.id)
+        guard !demoIDs.isEmpty else { return }
+        events.removeAll { demoIDs.contains($0.id) }
+        demoIDs.forEach { guestsByEvent[$0] = nil }
+        save()
     }
 
     func save() {
