@@ -313,6 +313,10 @@ struct QRScanResultView: View {
                             Divider()
                             resultRow(icon: "calendar", title: "Evento", value: result.eventName.isEmpty ? "—" : result.eventName)
                             Divider()
+                            resultRow(icon: "mappin.and.ellipse", title: "Locale / Discoteca", value: result.venueName.isEmpty ? "—" : result.venueName)
+                            Divider()
+                            resultRow(icon: "ticket.fill", title: "Pacchetto", value: result.packageName.isEmpty ? "—" : result.packageName)
+                            Divider()
                             resultRow(icon: "calendar.badge.clock", title: "Data evento", value: result.eventDate.isEmpty ? "—" : result.eventDate)
                         }
                     }
