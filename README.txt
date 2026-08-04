@@ -1,9 +1,13 @@
-LISTUP PR - BUILD STABILE APP STORE
+ListUp PR – Build 31
 
-Questa build ripristina esattamente la configurazione Xcode ed entitlements della Build 23 funzionante.
-Sign in with Apple è stato rimosso perché era l'unica modifica di configurazione introdotta prima dell'errore "Preparing build for App Store Connect failed".
+Novità:
+- Recupero credenziali locale tramite PIN personale di 6 cifre.
+- PIN salvato nel Portachiavi di iOS, separato dai dati del profilo.
+- Alla registrazione vengono richiesti PIN e conferma PIN.
+- Nel login è disponibile “Hai dimenticato username o password?”.
+- Il PR può recuperare lo username e impostare una nuova password usando Nome PR/username + PIN.
+- Nelle Impostazioni è possibile impostare o modificare il PIN di recupero.
+- Nessun server, database o Accedi con Apple.
+- Nessuna nuova capability o modifica agli entitlements.
 
-Bundle Identifier: com.dmb.ListUpPR
-CloudKit: iCloud.com.dmb.ListUpPR
-
-Per Git: sostituire integralmente il contenuto del repository con questi file, senza mantenere file della Build 26/27.
+Nota: senza server, il recupero è garantito sul dispositivo in cui è stato configurato il PIN. La cancellazione completa dell’app o il cambio dispositivo possono rendere il PIN non disponibile.
