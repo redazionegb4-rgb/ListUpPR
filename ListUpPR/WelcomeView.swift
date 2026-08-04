@@ -146,8 +146,7 @@ struct GlobalEntranceScannerView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @State private var showScanner = true
-    @State private var resultMessage = ""
-    @State private var showResult = false
+    @State private var scanResult: QRCheckInResult?
 
     var body: some View {
         NavigationStack {
@@ -160,7 +159,7 @@ struct GlobalEntranceScannerView: View {
                         .foregroundStyle(Color.appCyan)
                     Text("Scanner ingresso")
                         .font(.largeTitle.bold())
-                    Text("Inquadra il QR di qualsiasi cliente. L’app riconosce automaticamente evento, lista e nominativo e aggiorna il relativo ingresso.")
+                    Text("Inquadra il QR di qualsiasi cliente. L’app riconosce automaticamente evento, nominativo e profilo PR corretto.")
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
@@ -177,14 +176,80 @@ struct GlobalEntranceScannerView: View {
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Chiudi") { dismiss() } } }
             .sheet(isPresented: $showScanner) {
                 QRScannerSheet { code in
-                    resultMessage = model.checkInFromQRCodeGlobally(code)
-                    showResult = true
+                    scanResult = model.checkInFromQRCodeGlobally(code)
                 }
             }
-            .alert("Esito scansione", isPresented: $showResult) {
-                Button("Scansiona altro") { showScanner = true }
-                Button("Chiudi", role: .cancel) { dismiss() }
-            } message: { Text(resultMessage) }
+            .sheet(item: $scanResult) { result in
+                QRScanResultView(result: result) {
+                    scanResult = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { showScanner = true }
+                } onClose: {
+                    scanResult = nil
+                    dismiss()
+                }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+        }
+    }
+}
+
+struct QRScanResultView: View {
+    let result: QRCheckInResult
+    let onScanAgain: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            AppBackground()
+            VStack(spacing: 18) {
+                ZStack {
+                    Circle()
+                        .fill(result.isValid ? Color.green.opacity(0.18) : Color.red.opacity(0.18))
+                        .frame(width: 88, height: 88)
+                    Image(systemName: result.isValid ? "checkmark.shield.fill" : "xmark.shield.fill")
+                        .font(.system(size: 42, weight: .bold))
+                        .foregroundStyle(result.isValid ? .green : .red)
+                }
+
+                Text(result.title)
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(result.isValid ? .green : .primary)
+
+                if !result.guestName.isEmpty {
+                    Text(result.guestName).font(.title3.bold())
+                }
+
+                VStack(spacing: 12) {
+                    resultRow(icon: "person.crop.circle.badge.checkmark", title: "Nome PR", value: result.prName.isEmpty ? "—" : result.prName)
+                    resultRow(icon: "number", title: "Codice PR", value: result.prCode.isEmpty ? "—" : result.prCode)
+                    resultRow(icon: "calendar", title: "Evento", value: result.eventName.isEmpty ? "—" : result.eventName)
+                }
+                .padding(16)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                Text(result.detail)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                HStack(spacing: 12) {
+                    Button("Chiudi", action: onClose)
+                        .buttonStyle(.bordered)
+                    Button("Scansiona altro", action: onScanAgain)
+                        .buttonStyle(PrimaryButtonStyle())
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    private func resultRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
+            Text(title).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).fontWeight(.semibold).multilineTextAlignment(.trailing)
         }
     }
 }

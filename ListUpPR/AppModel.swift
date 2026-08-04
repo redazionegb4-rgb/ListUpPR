@@ -34,6 +34,25 @@ struct PRProfile: Codable, Hashable {
     var password: String
 }
 
+struct PRAccount: Identifiable, Codable, Hashable {
+    var id: UUID
+    var profile: PRProfile
+    var events: [PREvent]
+    var guestsByEvent: [String: [Guest]]
+    var createdAt: Date
+}
+
+struct QRCheckInResult: Identifiable {
+    let id = UUID()
+    let isValid: Bool
+    let title: String
+    let guestName: String
+    let eventName: String
+    let prName: String
+    let prCode: String
+    let detail: String
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     enum AppRole: String, Codable { case pr, entrance }
@@ -55,6 +74,9 @@ final class AppModel: ObservableObject {
     @Published var lastEntry: (eventID: UUID, guestID: UUID)?
     @Published var lastRefresh = Date()
 
+    private var accounts: [PRAccount] = []
+    private var activeAccountID: UUID?
+
     private let defaults = UserDefaults.standard
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -72,20 +94,39 @@ final class AppModel: ObservableObject {
     func registerPR(name: String, password: String) -> Bool {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty, password.count >= 4 else { return false }
-        let code = String(format: "%03d", Int.random(in: 100...999))
-        profile = PRProfile(name: cleanName, code: code, password: password)
+        commitActiveAccount()
+        let usedCodes = Set(accounts.map { $0.profile.code })
+        let availableCodes = (100...999).map(String.init).filter { !usedCodes.contains($0) }
+        guard let code = availableCodes.randomElement() else { return false }
+        let account = PRAccount(
+            id: UUID(),
+            profile: PRProfile(name: cleanName, code: code, password: password),
+            events: [],
+            guestsByEvent: [:],
+            createdAt: .now
+        )
+        accounts.append(account)
+        activate(account)
         selectedRole = .pr
         save()
         return true
     }
 
     func loginAsPR(code: String, password: String) -> Bool {
-        guard let profile else { return false }
+        commitActiveAccount()
         let cleanCode = code.filter(\.isNumber)
         let cleanPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
-        let codeMatches = !cleanCode.isEmpty && cleanCode == profile.code
-        let passwordMatches = !cleanPassword.isEmpty && cleanPassword == profile.password
-        guard codeMatches || passwordMatches else { return false }
+        let match: PRAccount?
+        if !cleanCode.isEmpty {
+            match = accounts.first(where: { $0.profile.code == cleanCode })
+        } else if !cleanPassword.isEmpty {
+            let matches = accounts.filter { $0.profile.password == cleanPassword }
+            match = matches.sorted { $0.createdAt > $1.createdAt }.first
+        } else {
+            match = nil
+        }
+        guard let match else { return false }
+        activate(match)
         selectedRole = .pr
         save()
         return true
@@ -173,33 +214,44 @@ final class AppModel: ObservableObject {
         return "Ingresso confermato: \(guests[index].fullName)"
     }
 
-    func checkInFromQRCodeGlobally(_ encoded: String) -> String {
+    func checkInFromQRCodeGlobally(_ encoded: String) -> QRCheckInResult {
         let prefix = "LISTUPPR|2|"
         guard encoded.hasPrefix(prefix),
               let data = Data(base64Encoded: String(encoded.dropFirst(prefix.count))),
               let payload = try? decoder.decode(GuestQRPayload.self, from: data),
-              payload.version == 2 else { return "QR non valido o non generato da Guestly PR" }
-
-        guard let event = events.first(where: { $0.id == payload.eventID }) else {
-            return "Evento non trovato su questo dispositivo. Aggiorna i dati e riprova."
+              payload.version == 2 else {
+            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: "", eventName: "", prName: "", prCode: "", detail: "QR non valido o non generato da Guestly PR")
         }
-        guard var guests = guestsByEvent[payload.eventID],
+
+        guard let accountIndex = accounts.firstIndex(where: { $0.profile.code == payload.prCode }) else {
+            return QRCheckInResult(isValid: false, title: "PR non trovato", guestName: "", eventName: "", prName: "", prCode: payload.prCode, detail: "Aggiorna i dati e riprova")
+        }
+        var account = accounts[accountIndex]
+        guard let event = account.events.first(where: { $0.id == payload.eventID }) else {
+            return QRCheckInResult(isValid: false, title: "Evento non trovato", guestName: "", eventName: "", prName: account.profile.name, prCode: account.profile.code, detail: "Il QR non appartiene a un evento disponibile")
+        }
+        let key = payload.eventID.uuidString
+        guard var guests = account.guestsByEvent[key],
               let index = guests.firstIndex(where: { $0.id == payload.guestID }) else {
-            return "Cliente non trovato nella lista di \(event.name)"
+            return QRCheckInResult(isValid: false, title: "Cliente non trovato", guestName: "", eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "Il cliente non è presente nella lista")
         }
         guard payload.token == guests[index].effectiveQRToken else {
-            return "QR non valido per questo cliente"
+            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "QR non valido per questo cliente")
         }
         if guests[index].entered {
-            return "\(guests[index].fullName) risulta già entrato a \(event.name)"
+            return QRCheckInResult(isValid: false, title: "Ingresso già registrato", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "Questo QR è già stato utilizzato")
         }
 
         guests[index].entered = true
         guests[index].entryTime = .now
-        guestsByEvent[payload.eventID] = guests
-        lastEntry = (payload.eventID, payload.guestID)
-        save()
-        return "Ingresso confermato: \(guests[index].fullName)\nEvento: \(event.name)\nPR: \(payload.prCode)"
+        account.guestsByEvent[key] = guests
+        accounts[accountIndex] = account
+        if activeAccountID == account.id {
+            guestsByEvent[payload.eventID] = guests
+            lastEntry = (payload.eventID, payload.guestID)
+        }
+        persistAccounts()
+        return QRCheckInResult(isValid: true, title: "ACCESSO VALIDO", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "Ingresso registrato correttamente")
     }
 
     func toggleEntry(guestID: UUID, eventID: UUID) {
@@ -282,8 +334,10 @@ final class AppModel: ObservableObject {
     func updateSync(_ enabled: Bool) { syncEnabled = enabled; save() }
 
     func resetAllData() {
-        profile = nil; selectedRole = nil; events = []; guestsByEvent = [:]; entranceCode = ""
-        defaults.removePersistentDomain(forName: Bundle.main.bundleIdentifier ?? "ListUpPR")
+        if let activeAccountID { accounts.removeAll { $0.id == activeAccountID } }
+        profile = nil; selectedRole = nil; events = []; guestsByEvent = [:]; entranceCode = ""; activeAccountID = nil
+        persistAccounts()
+        savePreferences()
     }
 
     private func removeLegacyDemoDataIfNeeded() {
@@ -297,10 +351,35 @@ final class AppModel: ObservableObject {
     }
 
     func save() {
-        if let profile, let data = try? encoder.encode(profile) { defaults.set(data, forKey: "profile.v2") }
-        if let data = try? encoder.encode(events) { defaults.set(data, forKey: "events.v2") }
+        commitActiveAccount()
+        persistAccounts()
+        savePreferences()
+    }
+
+    private func activate(_ account: PRAccount) {
+        activeAccountID = account.id
+        profile = account.profile
+        events = account.events
+        guestsByEvent = Dictionary(uniqueKeysWithValues: account.guestsByEvent.compactMap { key, value in
+            UUID(uuidString: key).map { ($0, value) }
+        })
+    }
+
+    private func commitActiveAccount() {
+        guard let activeAccountID, let profile,
+              let index = accounts.firstIndex(where: { $0.id == activeAccountID }) else { return }
         let map = guestsByEvent.reduce(into: [String: [Guest]]()) { $0[$1.key.uuidString] = $1.value }
-        if let data = try? encoder.encode(map) { defaults.set(data, forKey: "guests.v2") }
+        accounts[index].profile = profile
+        accounts[index].events = events
+        accounts[index].guestsByEvent = map
+    }
+
+    private func persistAccounts() {
+        if let data = try? encoder.encode(accounts) { defaults.set(data, forKey: "accounts.v3") }
+        defaults.set(activeAccountID?.uuidString, forKey: "activeAccount.v3")
+    }
+
+    private func savePreferences() {
         defaults.set(selectedRole?.rawValue, forKey: "role.v2")
         defaults.set(entranceCode, forKey: "entranceCode.v2")
         defaults.set(theme.rawValue, forKey: "theme.v2")
@@ -308,14 +387,22 @@ final class AppModel: ObservableObject {
     }
 
     private func load() {
-        if let data = defaults.data(forKey: "profile.v2") { profile = try? decoder.decode(PRProfile.self, from: data) }
-        if let data = defaults.data(forKey: "events.v2") { events = (try? decoder.decode([PREvent].self, from: data)) ?? [] }
-        if let data = defaults.data(forKey: "guests.v2"), let map = try? decoder.decode([String: [Guest]].self, from: data) {
-            guestsByEvent = Dictionary(uniqueKeysWithValues: map.compactMap { key, value in UUID(uuidString: key).map { ($0, value) } })
+        if let data = defaults.data(forKey: "accounts.v3"), let stored = try? decoder.decode([PRAccount].self, from: data) {
+            accounts = stored
+        } else if let data = defaults.data(forKey: "profile.v2"), let oldProfile = try? decoder.decode(PRProfile.self, from: data) {
+            let oldEvents = defaults.data(forKey: "events.v2").flatMap { try? decoder.decode([PREvent].self, from: $0) } ?? []
+            let oldMap = defaults.data(forKey: "guests.v2").flatMap { try? decoder.decode([String: [Guest]].self, from: $0) } ?? [:]
+            accounts = [PRAccount(id: UUID(), profile: oldProfile, events: oldEvents, guestsByEvent: oldMap, createdAt: .now)]
+        }
+        if let rawID = defaults.string(forKey: "activeAccount.v3"), let id = UUID(uuidString: rawID), let account = accounts.first(where: { $0.id == id }) {
+            activate(account)
+        } else if let account = accounts.first {
+            activate(account)
         }
         if let raw = defaults.string(forKey: "role.v2") { selectedRole = AppRole(rawValue: raw) }
         entranceCode = defaults.string(forKey: "entranceCode.v2") ?? ""
         theme = AppTheme(rawValue: defaults.string(forKey: "theme.v2") ?? "") ?? .dark
         syncEnabled = defaults.object(forKey: "sync.v2") as? Bool ?? true
     }
+
 }
