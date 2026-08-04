@@ -11,3 +11,5 @@ Novità:
 - Nome PR, codice PR, evento, pacchetto e prezzo visibili nella card.
 
 Firma, Bundle Identifier, CloudKit, entitlements e compatibilità iPhone/iPad invariati.
+
+Build 18: biglietto digitale ridisegnato, date italiane e nuove pagine evento/cliente.

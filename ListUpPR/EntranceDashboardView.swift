@@ -178,7 +178,7 @@ struct EntranceDashboardView: View {
             }
 
             HStack {
-                Label(event.date.formatted(date: .abbreviated, time: .shortened), systemImage: "clock")
+                Label(italianEventDateTime(event.date), systemImage: "clock")
                 Spacer()
                 Text(guests.isEmpty ? "Nessun cliente" : "\(guests.count - entered) attesi")
             }

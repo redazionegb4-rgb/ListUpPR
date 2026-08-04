@@ -157,7 +157,7 @@ struct LargeEventCard: View {
                     Spacer(); Image(systemName: "chevron.right.circle.fill").font(.title2).foregroundStyle(Color.appCyan)
                 }
                 Label(event.venue, systemImage: "mappin.and.ellipse")
-                Label(event.date.formatted(date: .long, time: .shortened), systemImage: "calendar.badge.clock")
+                Label(italianEventDateTime(event.date), systemImage: "calendar.badge.clock")
                 Divider()
                 HStack {
                     Label("\(guests.count) in lista", systemImage: "person.2.fill")
@@ -211,7 +211,7 @@ struct EventsView: View {
                     GradientIcon(systemName: past ? "clock.arrow.circlepath" : "music.note.list")
                     VStack(alignment: .leading, spacing: 5) {
                         Text(event.name).font(.headline)
-                        Text("\(event.venue) • \(event.date.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+                        Text("\(event.venue) • \(italianEventDateTime(event.date))").font(.caption).foregroundStyle(.secondary)
                         let guests = model.guestsByEvent[event.id] ?? []
                         Text(past ? "Storico: \(guests.filter(\.entered).count) entrati su \(guests.count)" : "\(guests.filter(\.entered).count) entrati su \(guests.count)")
                             .font(.caption2.bold()).foregroundStyle(past ? .secondary : Color.appCyan)
@@ -528,16 +528,52 @@ struct ChangePRNameView: View {
 struct NewEventView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
-    @State private var name = ""; @State private var venue = ""; @State private var date = Date()
+    @State private var name = ""
+    @State private var venue = ""
+    @State private var date = Date()
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Evento") { TextField("Nome serata", text: $name); TextField("Discoteca", text: $venue); DatePicker("Data e ora", selection: $date) }
-                Button("Crea evento") { model.addEvent(PREvent(name: name, venue: venue, date: date)); dismiss() }
-                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
-            }.navigationTitle("Nuovo evento")
-            .navigationBarTitleDisplayMode(.inline)
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        FormHero(icon: "calendar.badge.plus", title: "Nuovo evento", subtitle: "Crea la serata e prepara la lista clienti")
+
+                        ModernFormCard(title: "Informazioni evento", icon: "calendar") {
+                            ModernTextField(title: "Nome serata", placeholder: "Es. White Party", text: $name, icon: "sparkles")
+                            ModernTextField(title: "Locale", placeholder: "Es. Le Capannine", text: $venue, icon: "mappin.and.ellipse")
+                        }
+
+                        ModernFormCard(title: "Data e orario", icon: "clock") {
+                            DatePicker("Quando si svolge", selection: $date)
+                                .datePickerStyle(.graphical)
+                                .environment(\.locale, Locale(identifier: "it_IT"))
+                        }
+
+                        PremiumCard {
+                            HStack {
+                                Image(systemName: "info.circle.fill").foregroundStyle(Color.appCyan)
+                                Text("Dopo la mezzanotte del giorno successivo, l’evento verrà spostato automaticamente tra gli eventi passati.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Button {
+                            model.addEvent(PREvent(name: name, venue: venue, date: date))
+                            dismiss()
+                        } label: {
+                            Label("Crea evento", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    }
+                    .padding(20)
+                }
+            }
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

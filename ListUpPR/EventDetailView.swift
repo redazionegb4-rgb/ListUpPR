@@ -51,7 +51,7 @@ struct EventDetailView: View {
         let rows = guests.sorted { $0.fullName < $1.fullName }.map { guest in
             "\(guest.entered ? "✅" : "⬜️") \(guest.fullName) — \(guest.packageName)"
         }
-        return ([event.name, "\(event.venue) — \(event.date.formatted(date: .abbreviated, time: .shortened))", ""] + rows).joined(separator: "\n")
+        return ([event.name, "\(event.venue) — \(italianEventDateTime(event.date))", ""] + rows).joined(separator: "\n")
     }
 
     private var progress: Double { guests.isEmpty ? 0 : Double(guests.filter(\.entered).count) / Double(guests.count) }
@@ -77,22 +77,33 @@ struct EventDetailView: View {
     var body: some View {
         List {
             Section {
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(event.venue).font(.headline)
-                            Text(event.date.formatted(date: .long, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top, spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 18).fill(LinearGradient(colors: [Color.appCyan, Color.mint], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            Image(systemName: "calendar.badge.clock").font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
+                        }.frame(width: 58, height: 58)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(event.name).font(.title2.bold())
+                            Label(event.venue, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(.secondary)
+                            Label(italianEventDateTime(event.date), systemImage: "clock").font(.subheadline).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text("\(Int(progress * 100))%").font(.title2.bold().monospacedDigit()).foregroundStyle(Color.appPurple)
+                        Text("\(Int(progress * 100))%")
+                            .font(.title2.bold().monospacedDigit())
+                            .foregroundStyle(Color.appCyan)
                     }
-                    ProgressView(value: progress).tint(.appPurple)
+                    ProgressView(value: progress).tint(.appCyan)
                     HStack(spacing: 10) {
                         SummaryPill(value: "\(guests.count)", label: "In lista", icon: "person.3.fill")
                         SummaryPill(value: "\(guests.filter(\.entered).count)", label: "Entrati", icon: "checkmark.circle.fill")
                         SummaryPill(value: "\(guests.filter { !$0.entered }.count)", label: "Attesi", icon: "clock.fill")
                     }
-                }.listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
+                }
+                .padding(18)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
             }
 
             Section {
@@ -253,7 +264,7 @@ struct GuestRow: View {
                     }.font(.caption)
                     if !guest.notes.isEmpty { Text(guest.notes).font(.caption2).foregroundStyle(.secondary).lineLimit(1) }
                     if guest.entered, let entryTime = guest.entryTime {
-                        Text("Entrato alle \(entryTime.formatted(date: .omitted, time: .shortened))").font(.caption2).foregroundStyle(.green)
+                        Text("Entrato alle \(italianTicketTime(entryTime))").font(.caption2).foregroundStyle(.green)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -292,61 +303,106 @@ struct AddGuestView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField("Nome", text: $first)
-                    TextField("Cognome", text: $last)
-                    TextField("Numero di telefono (facoltativo)", text: $phone).keyboardType(.phonePad)
-                } header: {
-                    Text("Cliente")
-                } footer: {
-                    Text("Ogni nominativo corrisponde a una sola persona.")
-                }
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        FormHero(icon: "person.badge.plus", title: "Nuovo cliente", subtitle: "Inserisci una persona e collegala a questo evento")
 
-                Section {
-                    TextField("Esempio: Lista Marco", text: $listName)
-                    TextField("Esempio: Ingresso + drink", text: $packageName)
-                    BookingAmountField(
-                        title: "Prezzo totale",
-                        explanation: "Costo completo dell’ingresso o del pacchetto",
-                        placeholder: "Es. 20,00",
-                        text: $priceText
-                    )
-                    TextField("Note: tavolo, accompagnatore, richieste…", text: $notes, axis: .vertical).lineLimit(2...5)
-                } header: {
-                    Text("Prenotazione")
-                } footer: {
-                    Text("Il PR inserisce solo il pacchetto venduto e il relativo costo. Il pagamento viene effettuato direttamente alla cassa.")
-                }
+                        ModernFormCard(title: "Dati cliente", icon: "person.text.rectangle") {
+                            ModernTextField(title: "Nome", placeholder: "Es. Mario", text: $first, icon: "person")
+                            ModernTextField(title: "Cognome", placeholder: "Es. Rossi", text: $last, icon: "person.fill")
+                            ModernTextField(title: "Telefono", placeholder: "Facoltativo", text: $phone, icon: "phone", keyboard: .phonePad)
+                        }
 
-                if duplicateWarning {
-                    Label("Esiste già un cliente con questo nome nell’evento.", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                }
+                        ModernFormCard(title: "Prenotazione", icon: "ticket") {
+                            ModernTextField(title: "Nome lista", placeholder: "Es. Lista Demetrio", text: $listName, icon: "list.bullet")
+                            ModernTextField(title: "Pacchetto", placeholder: "Es. Ingresso + drink", text: $packageName, icon: "ticket.fill")
+                            ModernTextField(title: "Prezzo alla cassa", placeholder: "Es. 20,00", text: $priceText, icon: "eurosign.circle", keyboard: .decimalPad)
+                            ModernTextField(title: "Note", placeholder: "Richieste o informazioni utili", text: $notes, icon: "note.text")
+                        }
 
-                Button("Aggiungi cliente") {
-                    if model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) {
-                        duplicateWarning = true
-                        return
+                        if duplicateWarning {
+                            Label("Esiste già un cliente con questo nome nell’evento.", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 16))
+                        }
+
+                        Button {
+                            if model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) {
+                                duplicateWarning = true
+                                return
+                            }
+                            model.addGuest(Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: max(0, price), deposit: 0, notes: notes, phone: phone), to: eventID)
+                            dismiss()
+                        } label: {
+                            Label("Aggiungi cliente", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
-                    let guest = Guest(
-                        firstName: first,
-                        lastName: last,
-                        listName: listName,
-                        packageName: packageName,
-                        price: max(0, price),
-                        deposit: 0,
-                        notes: notes,
-                        phone: phone
-                    )
-                    model.addGuest(guest, to: eventID)
-                    dismiss()
+                    .padding(20)
                 }
-                .disabled(first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .navigationTitle("Nuovo cliente")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+struct FormHero: View {
+    let icon: String
+    let title: String
+    let subtitle: String
+    var body: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 20).fill(LinearGradient(colors: [Color.appCyan, Color.mint], startPoint: .topLeading, endPoint: .bottomTrailing))
+                Image(systemName: icon).font(.system(size: 27, weight: .bold)).foregroundStyle(.white)
+            }.frame(width: 64, height: 64)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.system(size: 28, weight: .black, design: .rounded))
+                Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+    }
+}
+
+struct ModernFormCard<Content: View>: View {
+    let title: String
+    let icon: String
+    let content: Content
+    init(title: String, icon: String, @ViewBuilder content: () -> Content) {
+        self.title = title; self.icon = icon; self.content = content()
+    }
+    var body: some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Label(title, systemImage: icon).font(.headline)
+                content
+            }
+        }
+    }
+}
+
+struct ModernTextField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    let icon: String
+    var keyboard: UIKeyboardType = .default
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption.bold()).foregroundStyle(.secondary)
+            HStack(spacing: 11) {
+                Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 22)
+                TextField(placeholder, text: $text).keyboardType(keyboard)
+            }
+            .padding(14)
+            .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
         }
     }
 }
@@ -374,25 +430,44 @@ struct EditGuestView: View {
     @Environment(\.dismiss) var dismiss
     let eventID: UUID
     @State var guest: Guest
+    @State private var priceText: String = ""
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Cliente") {
-                    TextField("Nome", text: $guest.firstName)
-                    TextField("Cognome", text: $guest.lastName)
-                    TextField("Telefono", text: Binding(get: { guest.phone ?? "" }, set: { guest.phone = $0 })).keyboardType(.phonePad)
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        FormHero(icon: "person.crop.circle.badge.checkmark", title: "Modifica cliente", subtitle: "Aggiorna nominativo, pacchetto e informazioni")
+
+                        ModernFormCard(title: "Dati cliente", icon: "person.text.rectangle") {
+                            ModernTextField(title: "Nome", placeholder: "Nome", text: $guest.firstName, icon: "person")
+                            ModernTextField(title: "Cognome", placeholder: "Cognome", text: $guest.lastName, icon: "person.fill")
+                            ModernTextField(title: "Telefono", placeholder: "Facoltativo", text: Binding(get: { guest.phone ?? "" }, set: { guest.phone = $0 }), icon: "phone", keyboard: .phonePad)
+                        }
+
+                        ModernFormCard(title: "Prenotazione", icon: "ticket") {
+                            ModernTextField(title: "Nome lista", placeholder: "Nome lista", text: $guest.listName, icon: "list.bullet")
+                            ModernTextField(title: "Pacchetto", placeholder: "Pacchetto", text: $guest.packageName, icon: "ticket.fill")
+                            ModernTextField(title: "Prezzo alla cassa", placeholder: "Es. 20,00", text: $priceText, icon: "eurosign.circle", keyboard: .decimalPad)
+                            ModernTextField(title: "Note", placeholder: "Informazioni utili", text: $guest.notes, icon: "note.text")
+                        }
+
+                        Button {
+                            guest.price = max(0, Double(priceText.replacingOccurrences(of: ",", with: ".")) ?? guest.price)
+                            model.updateGuest(guest, eventID: eventID)
+                            dismiss()
+                        } label: {
+                            Label("Salva modifiche", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                    }
+                    .padding(20)
                 }
-                Section("Prenotazione") {
-                    TextField("Nome lista", text: $guest.listName)
-                    TextField("Pacchetto", text: $guest.packageName)
-                    TextField("Prezzo", value: $guest.price, format: .number).keyboardType(.decimalPad)
-                    TextField("Note", text: $guest.notes, axis: .vertical)
-                }
-                Button("Salva modifiche") { model.updateGuest(guest, eventID: eventID); dismiss() }
-            }.navigationTitle("Modifica cliente")
-            .navigationBarTitleDisplayMode(.inline)
+            }
+            .onAppear { priceText = String(format: "%.2f", guest.price).replacingOccurrences(of: ".", with: ",") }
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }
