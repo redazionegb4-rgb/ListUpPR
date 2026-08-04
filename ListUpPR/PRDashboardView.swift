@@ -695,9 +695,13 @@ struct ChangeRecoveryPINView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("PIN di recupero") {
-                    SecureField("6 cifre", text: $pin).keyboardType(.numberPad)
-                    SecureField("Ripeti PIN", text: $confirmation).keyboardType(.numberPad)
+                Section {
+                    SecureField("6 cifre", text: $pin)
+                        .keyboardType(.numberPad)
+                    SecureField("Ripeti PIN", text: $confirmation)
+                        .keyboardType(.numberPad)
+                } header: {
+                    Text("PIN di recupero")
                 } footer: {
                     Text("Conservalo in un luogo sicuro. Serve per recuperare username e reimpostare la password sul dispositivo.")
                 }
