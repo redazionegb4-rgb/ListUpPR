@@ -245,6 +245,7 @@ struct AllGuestsView: View {
     @State private var search = ""
     @State private var editingGuest: Guest?
     @State private var deletingPair: GuestEventPair?
+    @State private var qrPair: GuestEventPair?
 
     var filtered: [(PREvent, Guest)] {
         model.events.flatMap { event in (model.guestsByEvent[event.id] ?? []).map { (event, $0) } }
@@ -268,6 +269,7 @@ struct AllGuestsView: View {
                         Spacer()
                         Menu {
                             Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") }
+                            Button { qrPair = GuestEventPair(event: event, guest: guest) } label: { Label("Visualizza e condividi QR", systemImage: "qrcode") }
                             Button(role: .destructive) { deletingPair = GuestEventPair(event: event, guest: guest) } label: { Label("Elimina cliente", systemImage: "trash") }
                         } label: {
                             Image(systemName: "ellipsis.circle.fill").font(.title2).foregroundStyle(Color.appCyan).padding(6)
@@ -286,6 +288,9 @@ struct AllGuestsView: View {
                 if let event = model.events.first(where: { (model.guestsByEvent[$0.id] ?? []).contains(where: { $0.id == guest.id }) }) {
                     EditGuestView(eventID: event.id, guest: guest)
                 }
+            }
+            .sheet(item: $qrPair) { pair in
+                GuestQRCodeView(guest: pair.guest, event: pair.event, prCode: model.profile?.code ?? "", prName: model.profile?.name ?? "PR")
             }
             .alert("Eliminare il cliente?", isPresented: Binding(get: { deletingPair != nil }, set: { if !$0 { deletingPair = nil } })) {
                 Button("Annulla", role: .cancel) { deletingPair = nil }

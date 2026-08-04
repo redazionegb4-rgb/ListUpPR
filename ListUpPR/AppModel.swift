@@ -32,6 +32,9 @@ struct PRProfile: Codable, Hashable {
     var name: String
     var code: String
     var password: String
+    var username: String? = nil
+
+    var loginUsername: String { username ?? code }
 }
 
 struct PRAccount: Identifiable, Codable, Hashable {
@@ -94,16 +97,18 @@ final class AppModel: ObservableObject {
     var enteredPeople: Int { allGuests.filter(\.entered).count }
     var activeEvent: PREvent? { events.sorted { $0.date < $1.date }.first(where: { $0.isActive }) }
 
-    func registerPR(name: String, password: String) -> Bool {
+    func registerPR(name: String, username: String, password: String) -> Bool {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanName.isEmpty, password.count >= 4 else { return false }
+        let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4 else { return false }
         commitActiveAccount()
+        guard !accounts.contains(where: { $0.profile.loginUsername.lowercased() == cleanUsername }) else { return false }
         let usedCodes = Set(accounts.map { $0.profile.code })
         let availableCodes = (100...999).map(String.init).filter { !usedCodes.contains($0) }
         guard let code = availableCodes.randomElement() else { return false }
         let account = PRAccount(
             id: UUID(),
-            profile: PRProfile(name: cleanName, code: code, password: password),
+            profile: PRProfile(name: cleanName, code: code, password: password, username: cleanUsername),
             events: [],
             guestsByEvent: [:],
             createdAt: .now
@@ -115,18 +120,28 @@ final class AppModel: ObservableObject {
         return true
     }
 
-    func loginAsPR(code: String, password: String) -> Bool {
+    func loginAsPR(username: String, password: String) -> Bool {
         commitActiveAccount()
-        let cleanCode = code.filter(\.isNumber)
+        let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cleanPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard cleanCode.count == 3, !cleanPassword.isEmpty,
+        guard !cleanUsername.isEmpty, !cleanPassword.isEmpty,
               let match = accounts.first(where: {
-                  $0.profile.code == cleanCode && $0.profile.password == cleanPassword
+                  $0.profile.loginUsername.lowercased() == cleanUsername && $0.profile.password == cleanPassword
               }) else { return false }
         activate(match)
         selectedRole = .pr
         save()
         return true
+    }
+
+    func usernameIsAvailable(_ username: String) -> Bool {
+        let clean = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return isValidUsername(clean) && !accounts.contains(where: { $0.profile.loginUsername.lowercased() == clean })
+    }
+
+    private func isValidUsername(_ username: String) -> Bool {
+        guard username.count >= 4 && username.count <= 24 else { return false }
+        return username.allSatisfy { $0.isLetter || $0.isNumber || $0 == "." || $0 == "_" }
     }
 
     func loginEntrance(code: String) -> Bool {

@@ -193,7 +193,7 @@ struct EventDetailView: View {
         .sheet(isPresented: $showQuickAdd) { QuickAddGuestsView(eventID: event.id) }
         .sheet(isPresented: $showCopy) { CopyGuestsView(destinationEventID: event.id) }
         .sheet(item: $editingGuest) { guest in EditGuestView(eventID: event.id, guest: guest) }
-        .sheet(item: $qrGuest) { guest in GuestQRCodeView(guest: guest, event: event, prCode: model.profile?.code ?? "") }
+        .sheet(item: $qrGuest) { guest in GuestQRCodeView(guest: guest, event: event, prCode: model.profile?.code ?? "", prName: model.profile?.name ?? "PR") }
         .sheet(isPresented: $showScanner) {
             QRScannerSheet { code in
                 scanMessage = model.checkInFromQRCode(code, expectedEventID: event.id)

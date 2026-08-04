@@ -1,15 +1,13 @@
-Guestly PR / ListUpPR - Build 13
+Guestly PR - Build 14
 
-Correzioni principali:
-- Risolto il foglio vuoto dalla Dashboard: Aggiungi cliente apre sempre l'evento selezionato.
-- Accesso PR reso univoco con codice PR + password obbligatori.
-- Password uguali tra PR diversi restano consentite e non creano conflitti.
-- Creazione cliente semplificata: pacchetto e costo, senza acconto del PR.
-- Il pagamento viene effettuato alla cassa.
-- Popup QR mostra nome PR, codice, evento, accesso valido e stato pagamento:
-  * nessun pagamento / ingresso omaggio
-  * pagamento completo
-  * intero importo da pagare in cassa
-  * saldo residuo da pagare in cassa
+Novità:
+- Accesso PR con username e password.
+- Registrazione PR completamente ridisegnata.
+- Login PR completamente ridisegnato.
+- Risultato scansione QR a schermo intero.
+- Pulsante Visualizza e condividi QR nella pagina Clienti.
+- Condivisione del QR come card immagine professionale.
+- QR personale, univoco e utilizzabile una sola volta.
+- Nome PR, codice PR, evento, pacchetto e prezzo visibili nella card.
 
-Bundle Identifier, firma, CloudKit ed entitlements non sono stati modificati.
+Firma, Bundle Identifier, CloudKit, entitlements e compatibilità iPhone/iPad invariati.

@@ -23,8 +23,8 @@ struct WelcomeView: View {
                         Label("Accedi come PR", systemImage: "person.crop.circle.badge.checkmark")
                     }.buttonStyle(PrimaryButtonStyle())
 
-                    AccessCard(icon: "sparkles", eyebrow: "PRIMO ACCESSO?", title: "Registrati come PR", tint: .appPurple) { sheet = .register }
-                    AccessCard(icon: "qrcode.viewfinder", eyebrow: "INGRESSO CLIENTI", title: "Scansiona QR ingresso", tint: .appCyan) { sheet = .scanner }
+                    AccessCard(icon: "sparkles", eyebrow: "PRIMO ACCESSO?", title: "Registrati come PR", tint: .appCyan) { sheet = .register }
+                    AccessCard(icon: "qrcode.viewfinder", eyebrow: "INGRESSO CLIENTI", title: "Scansiona QR ingresso", tint: .green) { sheet = .scanner }
                 }
 
                 HStack(spacing: 8) {
@@ -48,9 +48,9 @@ struct BrandMark: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(LinearGradient(colors: [.appPurple, .appPink], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(LinearGradient(colors: [.blue, .appCyan], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 104, height: 104)
-                .shadow(color: .appPurple.opacity(0.35), radius: 28, y: 12)
+                .shadow(color: .appCyan.opacity(0.30), radius: 28, y: 12)
             Image(systemName: "person.2.badge.gearshape.fill")
                 .font(.system(size: 45, weight: .bold)).foregroundStyle(.white)
         }
@@ -79,32 +79,48 @@ struct AccessCard: View {
 struct PRLoginView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
-    @State private var code = ""
+    @State private var username = ""
     @State private var password = ""
     @State private var error = false
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Dati di accesso PR") {
-                    TextField("Codice PR di 3 cifre", text: $code)
-                        .keyboardType(.numberPad)
-                        .onChange(of: code) { _, newValue in
-                            code = String(newValue.filter(\.isNumber).prefix(3))
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 22) {
+                        accessHero(icon: "person.crop.circle.badge.checkmark", title: "Bentornato", subtitle: "Accedi al tuo profilo PR con username e password")
+
+                        PremiumCard {
+                            VStack(spacing: 16) {
+                                ModernAccessField(icon: "at", title: "Username", placeholder: "Il tuo username", text: $username)
+                                ModernSecureField(icon: "lock.fill", title: "Password", placeholder: "La tua password", text: $password)
+                            }
                         }
-                    SecureField("Password", text: $password)
+
+                        if error {
+                            Label("Username o password non corretti.", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button {
+                            error = !model.loginAsPR(username: username, password: password)
+                            if !error { dismiss() }
+                        } label: {
+                            Label("Accedi al profilo", systemImage: "arrow.right.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
+
+                        Text("L’username identifica in modo univoco il tuo profilo, anche quando altri PR scelgono la stessa password.")
+                            .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    }
+                    .padding(22)
                 }
-                Section {
-                    Text("Per evitare accessi al profilo sbagliato sono richiesti sia il codice PR sia la password. Password uguali tra PR diversi non creano conflitti.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-                if error { Text("Codice PR o password non corretti.").foregroundStyle(.red) }
-                Button("Accedi") {
-                    if model.loginAsPR(code: code, password: password) { dismiss() } else { error = true }
-                }.disabled(code.filter(\.isNumber).count != 3 || password.isEmpty)
             }
-            .navigationTitle("Bentornato")
+            .navigationTitle("Accesso PR")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
@@ -114,31 +130,110 @@ struct RegisterPRView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
     @State private var name = ""
+    @State private var username = ""
     @State private var password = ""
     @State private var confirm = ""
     @State private var showError = false
 
+    private var normalizedUsername: String { username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+    private var usernameFormatValid: Bool {
+        normalizedUsername.count >= 4 && normalizedUsername.count <= 24 && normalizedUsername.allSatisfy { $0.isLetter || $0.isNumber || $0 == "." || $0 == "_" }
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Il tuo profilo") { TextField("Nome PR o nome del gruppo", text: $name) }
-                Section("Password di accesso") {
-                    SecureField("Minimo 4 caratteri", text: $password)
-                    SecureField("Ripeti password", text: $confirm)
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 22) {
+                        accessHero(icon: "person.badge.plus", title: "Crea il tuo profilo", subtitle: "Organizza eventi e liste in uno spazio personale e separato")
+
+                        PremiumCard {
+                            VStack(spacing: 16) {
+                                ModernAccessField(icon: "person.fill", title: "Nome PR", placeholder: "Es. Demetrio o Team White", text: $name)
+                                ModernAccessField(icon: "at", title: "Username", placeholder: "Es. demetrio.pr", text: $username)
+                                ModernSecureField(icon: "lock.fill", title: "Password", placeholder: "Minimo 4 caratteri", text: $password)
+                                ModernSecureField(icon: "checkmark.shield.fill", title: "Conferma password", placeholder: "Ripeti la password", text: $confirm)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Username da 4 a 24 caratteri", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
+                            Label("Usa lettere, numeri, punto o trattino basso", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
+                            Label("Password uguali tra PR diversi sono consentite", systemImage: "checkmark.circle.fill")
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if showError {
+                            Label("Username già utilizzato oppure dati non validi.", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button {
+                            guard password == confirm,
+                                  model.registerPR(name: name, username: normalizedUsername, password: password) else {
+                                showError = true
+                                return
+                            }
+                            dismiss()
+                        } label: {
+                            Label("Crea profilo PR", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !usernameFormatValid || password.count < 4 || password != confirm)
+                    }
+                    .padding(22)
                 }
-                Section {
-                    Text("Alla registrazione verrà generato automaticamente un codice numerico di 3 cifre.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-                if showError { Text("Controlla nome e password.").foregroundStyle(.red) }
-                Button("Registrati e genera codice") {
-                    guard password == confirm, model.registerPR(name: name, password: password) else { showError = true; return }
-                    dismiss()
-                }.disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || password.count < 4 || password != confirm)
             }
-            .navigationTitle("Nuovo profilo PR")
+            .navigationTitle("Registrazione PR")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
+    }
+}
+
+@ViewBuilder
+private func accessHero(icon: String, title: String, subtitle: String) -> some View {
+    VStack(spacing: 14) {
+        ZStack {
+            Circle().fill(Color.appCyan.opacity(0.15)).frame(width: 86, height: 86)
+            Image(systemName: icon).font(.system(size: 38, weight: .bold)).foregroundStyle(Color.appCyan)
+        }
+        Text(title).font(.system(size: 31, weight: .black, design: .rounded))
+        Text(subtitle).foregroundStyle(.secondary).multilineTextAlignment(.center)
+    }
+}
+
+struct ModernAccessField: View {
+    let icon: String, title: String, placeholder: String
+    @Binding var text: String
+    var body: some View {
+        HStack(spacing: 13) {
+            Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                TextField(placeholder, text: $text).textInputAutocapitalization(.never).autocorrectionDisabled()
+            }
+        }
+        .padding(14).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+struct ModernSecureField: View {
+    let icon: String, title: String, placeholder: String
+    @Binding var text: String
+    var body: some View {
+        HStack(spacing: 13) {
+            Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                SecureField(placeholder, text: $text).textInputAutocapitalization(.never)
+            }
+        }
+        .padding(14).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
@@ -157,38 +252,28 @@ struct GlobalEntranceScannerView: View {
                     Image(systemName: "qrcode.viewfinder")
                         .font(.system(size: 72, weight: .semibold))
                         .foregroundStyle(Color.appCyan)
-                    Text("Scanner ingresso")
-                        .font(.largeTitle.bold())
+                    Text("Scanner ingresso").font(.largeTitle.bold())
                     Text("Inquadra il QR di qualsiasi cliente. L’app riconosce automaticamente evento, nominativo e profilo PR corretto.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                    Button { showScanner = true } label: {
-                        Label("Apri fotocamera", systemImage: "camera.viewfinder")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
+                        .foregroundStyle(.secondary).multilineTextAlignment(.center).padding(.horizontal)
+                    Button { showScanner = true } label: { Label("Apri fotocamera", systemImage: "camera.viewfinder") }
+                        .buttonStyle(PrimaryButtonStyle())
                     Spacer()
-                }
-                .padding(24)
+                }.padding(24)
             }
             .navigationTitle("Ingresso QR")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Chiudi") { dismiss() } } }
             .sheet(isPresented: $showScanner) {
-                QRScannerSheet { code in
-                    scanResult = model.checkInFromQRCodeGlobally(code)
-                }
+                QRScannerSheet { code in scanResult = model.checkInFromQRCodeGlobally(code) }
             }
-            .sheet(item: $scanResult) { result in
+            .fullScreenCover(item: $scanResult) { result in
                 QRScanResultView(result: result) {
                     scanResult = nil
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { showScanner = true }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { showScanner = true }
                 } onClose: {
                     scanResult = nil
                     dismiss()
                 }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
             }
         }
     }
@@ -201,68 +286,52 @@ struct QRScanResultView: View {
 
     var body: some View {
         ZStack {
-            AppBackground()
-            VStack(spacing: 18) {
-                ZStack {
-                    Circle()
-                        .fill(result.isValid ? Color.green.opacity(0.18) : Color.red.opacity(0.18))
-                        .frame(width: 88, height: 88)
-                    Image(systemName: result.isValid ? "checkmark.shield.fill" : "xmark.shield.fill")
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundStyle(result.isValid ? .green : .red)
-                }
-
-                Text(result.title)
-                    .font(.system(size: 28, weight: .black, design: .rounded))
-                    .foregroundStyle(result.isValid ? .green : .primary)
-
-                if !result.guestName.isEmpty {
-                    Text(result.guestName).font(.title3.bold())
-                }
-
-                VStack(spacing: 12) {
-                    resultRow(icon: "person.crop.circle.badge.checkmark", title: "Nome PR", value: result.prName.isEmpty ? "—" : result.prName)
-                    resultRow(icon: "number", title: "Codice PR", value: result.prCode.isEmpty ? "—" : result.prCode)
-                    resultRow(icon: "calendar", title: "Evento", value: result.eventName.isEmpty ? "—" : result.eventName)
-                }
-                .padding(16)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-
-                if result.isValid && !result.paymentTitle.isEmpty {
-                    VStack(spacing: 8) {
-                        HStack {
-                            Image(systemName: result.amountDue > 0 ? "creditcard.trianglebadge.exclamationmark.fill" : "checkmark.seal.fill")
-                                .font(.title2)
-                            Text(result.paymentTitle).font(.headline.bold())
-                        }
-                        .foregroundStyle(result.amountDue > 0 ? .orange : .green)
-                        if result.amountDue > 0 {
-                            Text(result.amountDue, format: .currency(code: "EUR"))
-                                .font(.system(size: 30, weight: .black, design: .rounded))
-                        }
-                        Text(result.paymentDetail)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+            AppBackground().ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 22) {
+                    HStack {
+                        Text("Esito scansione").font(.headline)
+                        Spacer()
+                        Button("Chiudi", action: onClose).buttonStyle(.bordered)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background((result.amountDue > 0 ? Color.orange : Color.green).opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                }
 
-                Text(result.detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+                    ZStack {
+                        Circle().fill(result.isValid ? Color.green.opacity(0.16) : Color.red.opacity(0.16)).frame(width: 112, height: 112)
+                        Image(systemName: result.isValid ? "checkmark.shield.fill" : "xmark.shield.fill")
+                            .font(.system(size: 54, weight: .bold)).foregroundStyle(result.isValid ? .green : .red)
+                    }
+                    Text(result.title).font(.system(size: 34, weight: .black, design: .rounded)).foregroundStyle(result.isValid ? .green : .red)
+                    if !result.guestName.isEmpty { Text(result.guestName).font(.title.bold()).multilineTextAlignment(.center) }
 
-                HStack(spacing: 12) {
-                    Button("Chiudi", action: onClose)
-                        .buttonStyle(.bordered)
-                    Button("Scansiona altro", action: onScanAgain)
+                    PremiumCard {
+                        VStack(spacing: 15) {
+                            resultRow(icon: "person.crop.circle.badge.checkmark", title: "Nome PR", value: result.prName.isEmpty ? "—" : result.prName)
+                            Divider()
+                            resultRow(icon: "number", title: "Codice PR", value: result.prCode.isEmpty ? "—" : result.prCode)
+                            Divider()
+                            resultRow(icon: "calendar", title: "Evento", value: result.eventName.isEmpty ? "—" : result.eventName)
+                        }
+                    }
+
+                    if result.isValid {
+                        VStack(spacing: 12) {
+                            Label(result.paymentTitle, systemImage: result.amountDue > 0 ? "creditcard.trianglebadge.exclamationmark" : "checkmark.circle.fill")
+                                .font(.headline).foregroundStyle(result.amountDue > 0 ? .orange : .green)
+                            if result.amountDue > 0 { Text(result.amountDue, format: .currency(code: "EUR")).font(.system(size: 40, weight: .black, design: .rounded)) }
+                            Text(result.paymentDetail).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity).padding(22)
+                        .background((result.amountDue > 0 ? Color.orange : Color.green).opacity(0.10), in: RoundedRectangle(cornerRadius: 24))
+                    }
+
+                    Text(result.detail).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+
+                    Button(action: onScanAgain) { Label("Scansiona altro QR", systemImage: "qrcode.viewfinder") }
                         .buttonStyle(PrimaryButtonStyle())
+                    Button("Chiudi", action: onClose).buttonStyle(.bordered)
                 }
+                .padding(22).padding(.top, 16)
             }
-            .padding(24)
         }
     }
 
@@ -271,34 +340,7 @@ struct QRScanResultView: View {
             Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
             Text(title).foregroundStyle(.secondary)
             Spacer()
-            Text(value).fontWeight(.semibold).multilineTextAlignment(.trailing)
-        }
-    }
-}
-
-struct EntranceLoginView: View {
-    @EnvironmentObject var model: AppModel
-    @Environment(\.dismiss) var dismiss
-    @State private var code = ""
-    @State private var error = false
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                Image(systemName: "door.left.hand.open").font(.system(size: 58)).foregroundStyle(Color.appCyan)
-                Text("Accesso ingresso").font(.largeTitle.bold())
-                Text("Inserisci il codice di 3 cifre ricevuto dal PR.").foregroundStyle(.secondary).multilineTextAlignment(.center)
-                TextField("000", text: $code).keyboardType(.numberPad).multilineTextAlignment(.center)
-                    .font(.system(size: 34, weight: .bold, design: .rounded)).padding()
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20))
-                if error { Text("Codice non valido.").foregroundStyle(.red) }
-                Button("Apri la lista") {
-                    if model.loginEntrance(code: code) { dismiss() } else { error = true }
-                }.buttonStyle(PrimaryButtonStyle()).disabled(code.filter(\.isNumber).count != 3)
-                Spacer()
-            }.padding(24)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+            Text(value).font(.headline).multilineTextAlignment(.trailing)
         }
     }
 }
