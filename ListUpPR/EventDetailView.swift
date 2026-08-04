@@ -75,103 +75,115 @@ struct EventDetailView: View {
     }
 
     var body: some View {
-        List {
-            Section {
+        ZStack {
+            AppBackground()
+            ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    HStack(alignment: .top, spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 18).fill(LinearGradient(colors: [Color.appCyan, Color.mint], startPoint: .topLeading, endPoint: .bottomTrailing))
-                            Image(systemName: "calendar.badge.clock").font(.system(size: 26, weight: .bold)).foregroundStyle(.white)
-                        }.frame(width: 58, height: 58)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(event.name).font(.title2.bold())
-                            Label(event.venue, systemImage: "mappin.and.ellipse").font(.subheadline).foregroundStyle(.secondary)
-                            Label(italianEventDateTime(event.date), systemImage: "clock").font(.subheadline).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text("\(Int(progress * 100))%")
-                            .font(.title2.bold().monospacedDigit())
-                            .foregroundStyle(Color.appCyan)
-                    }
-                    ProgressView(value: progress).tint(.appCyan)
-                    HStack(spacing: 10) {
-                        SummaryPill(value: "\(guests.count)", label: "In lista", icon: "person.3.fill")
-                        SummaryPill(value: "\(guests.filter(\.entered).count)", label: "Entrati", icon: "checkmark.circle.fill")
-                        SummaryPill(value: "\(guests.filter { !$0.entered }.count)", label: "Attesi", icon: "clock.fill")
-                    }
-                }
-                .padding(18)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
-            }
+                    PremiumCard {
+                        VStack(alignment: .leading, spacing: 18) {
+                            HStack(alignment: .top, spacing: 16) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                        .fill(LinearGradient(colors: [Color.appCyan, .mint], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    Image(systemName: "calendar.badge.clock")
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundStyle(.white)
+                                }
+                                .frame(width: 66, height: 66)
 
-            Section {
-                Picker("Filtro", selection: $filter) {
-                    ForEach(GuestFilter.allCases) { Text($0.rawValue).tag($0) }
-                }.pickerStyle(.segmented)
-            }
+                                VStack(alignment: .leading, spacing: 7) {
+                                    Text(event.name)
+                                        .font(.system(size: 27, weight: .black, design: .rounded))
+                                    Label(event.venue, systemImage: "mappin.and.ellipse")
+                                    Label(italianEventDateTime(event.date), systemImage: "clock.fill")
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
 
-            if let last = model.lastEntry, last.eventID == event.id,
-               let guest = guests.first(where: { $0.id == last.guestID }) {
-                Section {
-                    Button { model.undoLastEntry() } label: {
-                        Label("Annulla ultimo ingresso: \(guest.fullName)", systemImage: "arrow.uturn.backward.circle.fill")
-                    }.foregroundStyle(.orange)
-                }
-            }
+                                Spacer()
+                                Text("\(Int(progress * 100))%")
+                                    .font(.title2.bold().monospacedDigit())
+                                    .foregroundStyle(Color.appCyan)
+                            }
 
-            Section("Lista clienti") {
-                if filtered.isEmpty {
-                    VStack(spacing: 10) {
-                        Image(systemName: filter == .entered ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.questionmark")
-                            .font(.system(size: 30))
-                            .foregroundStyle(.secondary)
-                        Text(emptyTitle)
-                            .font(.headline)
-                        Text(emptyMessage)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                            ProgressView(value: progress)
+                                .tint(.appCyan)
+                                .scaleEffect(x: 1, y: 1.35)
+
+                            HStack(spacing: 10) {
+                                SummaryPill(value: "\(guests.count)", label: "In lista", icon: "person.3.fill")
+                                SummaryPill(value: "\(guests.filter(\.entered).count)", label: "Entrati", icon: "checkmark.circle.fill")
+                                SummaryPill(value: "\(guests.filter { !$0.entered }.count)", label: "Attesi", icon: "clock.fill")
+                            }
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 28)
-                    .listRowBackground(Color.clear)
+
+                    Picker("Filtro", selection: $filter) {
+                        ForEach(GuestFilter.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(6)
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                    if let last = model.lastEntry, last.eventID == event.id,
+                       let guest = guests.first(where: { $0.id == last.guestID }) {
+                        Button { model.undoLastEntry() } label: {
+                            Label("Annulla ultimo ingresso: \(guest.fullName)", systemImage: "arrow.uturn.backward.circle.fill")
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.orange)
+                    }
+
+                    Text("Lista clienti")
+                        .font(.title2.bold())
+                        .padding(.top, 4)
+
+                    if filtered.isEmpty {
+                        PremiumCard {
+                            VStack(spacing: 12) {
+                                Image(systemName: filter == .entered ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.questionmark")
+                                    .font(.system(size: 36))
+                                    .foregroundStyle(Color.appCyan)
+                                Text(emptyTitle).font(.headline)
+                                Text(emptyMessage)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                        }
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(filtered) { guest in
+                                PremiumCard {
+                                    GuestRow(
+                                        guest: guest,
+                                        entranceMode: entranceMode,
+                                        toggle: { model.toggleEntry(guestID: guest.id, eventID: event.id) },
+                                        edit: { editingGuest = guest },
+                                        delete: { model.deleteGuest(guest, eventID: event.id) },
+                                        showQR: { qrGuest = guest }
+                                    )
+                                }
+                                .contextMenu {
+                                    if !entranceMode {
+                                        Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") }
+                                        Button { qrGuest = guest } label: { Label("Mostra QR ingresso", systemImage: "qrcode") }
+                                    }
+                                    if let phone = guest.phone, !phone.isEmpty {
+                                        Button { openPhone(phone) } label: { Label("Chiama", systemImage: "phone.fill") }
+                                        Button { openMessage(phone) } label: { Label("Messaggio", systemImage: "message.fill") }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                ForEach(filtered) { guest in
-                    GuestRow(
-                        guest: guest,
-                        entranceMode: entranceMode,
-                        toggle: { model.toggleEntry(guestID: guest.id, eventID: event.id) },
-                        edit: { editingGuest = guest },
-                        delete: { model.deleteGuest(guest, eventID: event.id) },
-                        showQR: { qrGuest = guest }
-                    )
-                    .contextMenu {
-                        if !entranceMode {
-                            Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") }
-                            Button { qrGuest = guest } label: { Label("Mostra QR ingresso", systemImage: "qrcode") }
-                        }
-                        if let phone = guest.phone, !phone.isEmpty {
-                            Button { openPhone(phone) } label: { Label("Chiama", systemImage: "phone.fill") }
-                            Button { openMessage(phone) } label: { Label("Messaggio", systemImage: "message.fill") }
-                        }
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button { model.toggleEntry(guestID: guest.id, eventID: event.id) } label: {
-                            Label(guest.entered ? "Annulla" : "Entrato", systemImage: guest.entered ? "arrow.uturn.backward" : "checkmark")
-                        }.tint(guest.entered ? .orange : .green)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        if !entranceMode { Button { editingGuest = guest } label: { Label("Modifica", systemImage: "pencil") }.tint(.appPurple) }
-                        if guest.remaining > 0 {
-                            Button { model.markBalancePaid(guestID: guest.id, eventID: event.id) } label: { Label("Saldo", systemImage: "eurosign.circle.fill") }.tint(.blue)
-                        }
-                        if !entranceMode {
-                            Button(role: .destructive) { model.deleteGuest(guest, eventID: event.id) } label: { Label("Elimina", systemImage: "trash") }
-                        }
-                    }
-                }
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+                .padding(.bottom, 32)
             }
         }
         .navigationTitle(event.name)

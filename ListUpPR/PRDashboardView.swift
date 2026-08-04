@@ -185,42 +185,132 @@ struct EmptyEventCard: View {
 struct EventsView: View {
     @EnvironmentObject var model: AppModel
     @State private var showNewEvent = false
+
     var body: some View {
         NavigationStack {
-            List {
-                if !model.upcomingEvents.isEmpty {
-                    Section("Eventi attivi") { eventRows(model.upcomingEvents, past: false) }
-                }
-                if !model.pastEvents.isEmpty {
-                    Section("Eventi passati") { eventRows(model.pastEvents, past: true) }
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Eventi")
+                                    .font(.system(size: 31, weight: .black, design: .rounded))
+                                Text("Gestisci serate, liste e storico")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button { showNewEvent = true } label: {
+                                Image(systemName: "plus")
+                                    .font(.title3.bold())
+                                    .frame(width: 48, height: 48)
+                                    .background(Color.appCyan, in: Circle())
+                                    .foregroundStyle(.white)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        if !model.upcomingEvents.isEmpty {
+                            Text("Eventi attivi")
+                                .font(.title2.bold())
+                            LazyVStack(spacing: 14) {
+                                ForEach(model.upcomingEvents) { event in eventCard(event, past: false) }
+                            }
+                        }
+
+                        if !model.pastEvents.isEmpty {
+                            Text("Eventi passati")
+                                .font(.title2.bold())
+                                .padding(.top, 6)
+                            LazyVStack(spacing: 14) {
+                                ForEach(model.pastEvents) { event in eventCard(event, past: true) }
+                            }
+                        }
+
+                        if model.events.isEmpty {
+                            PremiumCard {
+                                VStack(spacing: 14) {
+                                    Image(systemName: "calendar.badge.plus")
+                                        .font(.system(size: 42))
+                                        .foregroundStyle(Color.appCyan)
+                                    Text("Nessun evento")
+                                        .font(.title3.bold())
+                                    Text("Crea il primo evento e inizia ad aggiungere i clienti alla lista.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .multilineTextAlignment(.center)
+                                    Button("Crea evento") { showNewEvent = true }
+                                        .buttonStyle(.borderedProminent)
+                                        .tint(.appCyan)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 18)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 10)
+                    .padding(.bottom, 34)
                 }
             }
-            .navigationTitle("Eventi")
-            .navigationBarTitleDisplayMode(.inline)
-            .overlay { if model.events.isEmpty { ContentUnavailableView("Nessun evento", systemImage: "calendar", description: Text("Crea il primo evento.")) } }
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showNewEvent = true } label: { Image(systemName: "plus.circle.fill") } } }
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
         }
     }
 
-    @ViewBuilder private func eventRows(_ events: [PREvent], past: Bool) -> some View {
-        ForEach(events) { event in
-            NavigationLink(value: event) {
-                HStack(spacing: 13) {
-                    GradientIcon(systemName: past ? "clock.arrow.circlepath" : "music.note.list")
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(event.name).font(.headline)
-                        Text("\(event.venue) • \(italianEventDateTime(event.date))").font(.caption).foregroundStyle(.secondary)
-                        let guests = model.guestsByEvent[event.id] ?? []
-                        Text(past ? "Storico: \(guests.filter(\.entered).count) entrati su \(guests.count)" : "\(guests.filter(\.entered).count) entrati su \(guests.count)")
-                            .font(.caption2.bold()).foregroundStyle(past ? .secondary : Color.appCyan)
+    private func eventCard(_ event: PREvent, past: Bool) -> some View {
+        let guests = model.guestsByEvent[event.id] ?? []
+        let entered = guests.filter(\.entered).count
+        let progress = guests.isEmpty ? 0.0 : Double(entered) / Double(guests.count)
+
+        return NavigationLink(value: event) {
+            PremiumCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(LinearGradient(colors: past ? [.gray, .secondary] : [Color.appCyan, .mint], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            Image(systemName: past ? "clock.arrow.circlepath" : "calendar.badge.clock")
+                                .font(.system(size: 25, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(width: 60, height: 60)
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(event.name)
+                                .font(.title3.bold())
+                            Text(event.venue)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text(italianEventDateTime(event.date))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
                     }
-                }.padding(.vertical, 5)
-            }.swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina", systemImage: "trash") }
-                Button { _ = model.duplicateEvent(event) } label: { Label("Duplica", systemImage: "plus.square.on.square") }.tint(.appCyan)
+
+                    ProgressView(value: progress)
+                        .tint(past ? .gray : .appCyan)
+
+                    HStack {
+                        Label("\(guests.count) in lista", systemImage: "person.2.fill")
+                        Spacer()
+                        Label("\(entered) entrati", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(past ? .secondary : .green)
+                    }
+                    .font(.subheadline.bold())
+                }
             }
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button { _ = model.duplicateEvent(event) } label: { Label("Duplica evento", systemImage: "plus.square.on.square") }
+            Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina evento", systemImage: "trash") }
         }
     }
 }

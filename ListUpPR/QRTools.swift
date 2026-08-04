@@ -34,7 +34,7 @@ struct GuestQRCodeView: View {
                         QRPassCard(guest: guest, event: event, prCode: prCode, prName: prName, payload: payload)
                             .aspectRatio(0.61, contentMode: .fit)
                             .frame(maxWidth: 430)
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 18)
 
                         Text("Questo è il biglietto digitale completo da inviare al cliente.")
                             .font(.subheadline)
@@ -74,129 +74,153 @@ struct QRPassCard: View {
     let prName: String
     let payload: String
 
-    private let navy = Color(red: 0.025, green: 0.10, blue: 0.17)
-    private let cyan = Color(red: 0.02, green: 0.66, blue: 0.82)
+    private let ink = Color(red: 0.025, green: 0.09, blue: 0.15)
+    private let blue = Color(red: 0.02, green: 0.48, blue: 0.92)
+    private let aqua = Color(red: 0.00, green: 0.78, blue: 0.72)
 
     var body: some View {
         GeometryReader { proxy in
             let w = proxy.size.width
-            let scale = w / 828
+            let s = w / 828
             ZStack {
-                Color(red: 0.94, green: 0.96, blue: 0.98)
+                RoundedRectangle(cornerRadius: 48 * s, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [ink, Color(red: 0.02, green: 0.18, blue: 0.29), Color(red: 0.00, green: 0.35, blue: 0.43)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Circle()
+                    .fill(blue.opacity(0.28))
+                    .frame(width: 420 * s, height: 420 * s)
+                    .blur(radius: 70 * s)
+                    .offset(x: 260 * s, y: -500 * s)
+
+                Circle()
+                    .fill(aqua.opacity(0.22))
+                    .frame(width: 380 * s, height: 380 * s)
+                    .blur(radius: 70 * s)
+                    .offset(x: -260 * s, y: 520 * s)
+
                 VStack(spacing: 0) {
-                    header(scale)
-                    details(scale)
-                    tearLine(scale)
-                    qrSection(scale)
-                    footer(scale)
+                    passHeader(s)
+                    passDetails(s)
+                    perforation(s)
+                    qrArea(s)
+                    passFooter(s)
                 }
-                .background(navy)
-                .clipShape(RoundedRectangle(cornerRadius: 46 * scale, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 46 * scale, style: .continuous)
-                        .stroke(.white.opacity(0.16), lineWidth: max(1, 2 * scale))
-                }
-                .padding(18 * scale)
-                .shadow(color: .black.opacity(0.22), radius: 22 * scale, y: 12 * scale)
             }
+            .clipShape(RoundedRectangle(cornerRadius: 48 * s, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 48 * s, style: .continuous)
+                    .stroke(.white.opacity(0.16), lineWidth: max(1, 2 * s))
+            }
+            .shadow(color: .black.opacity(0.35), radius: 28 * s, y: 16 * s)
         }
     }
 
-    private func header(_ s: CGFloat) -> some View {
-        HStack(alignment: .center, spacing: 18 * s) {
+    private func passHeader(_ s: CGFloat) -> some View {
+        HStack(spacing: 18 * s) {
             ZStack {
                 RoundedRectangle(cornerRadius: 18 * s, style: .continuous)
-                    .fill(LinearGradient(colors: [cyan, .mint], startPoint: .topLeading, endPoint: .bottomTrailing))
-                Image(systemName: "ticket.fill").font(.system(size: 34 * s, weight: .bold)).foregroundStyle(.white)
+                    .fill(LinearGradient(colors: [blue, aqua], startPoint: .topLeading, endPoint: .bottomTrailing))
+                Image(systemName: "qrcode.viewfinder")
+                    .font(.system(size: 34 * s, weight: .black))
+                    .foregroundStyle(.white)
             }
             .frame(width: 74 * s, height: 74 * s)
 
-            VStack(alignment: .leading, spacing: 4 * s) {
+            VStack(alignment: .leading, spacing: 5 * s) {
                 Text("LISTUP PR")
                     .font(.system(size: 31 * s, weight: .black, design: .rounded))
-                Text("BIGLIETTO DIGITALE D’INGRESSO")
+                Text("PASS DIGITALE D’INGRESSO")
                     .font(.system(size: 11 * s, weight: .bold))
-                    .tracking(2.4 * s)
-                    .foregroundStyle(.white.opacity(0.70))
+                    .tracking(2.6 * s)
+                    .foregroundStyle(.white.opacity(0.68))
             }
             Spacer()
-            VStack(alignment: .trailing, spacing: 4 * s) {
+            VStack(alignment: .trailing, spacing: 5 * s) {
                 Text("DATA")
                     .font(.system(size: 11 * s, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(.white.opacity(0.62))
                 Text(italianTicketDate(event.date))
-                    .font(.system(size: 25 * s, weight: .bold, design: .rounded))
+                    .font(.system(size: 24 * s, weight: .bold, design: .rounded))
             }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 42 * s)
         .padding(.top, 42 * s)
-        .padding(.bottom, 30 * s)
-        .background(LinearGradient(colors: [navy, navy.opacity(0.96), Color(red: 0.02, green: 0.22, blue: 0.31)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        .padding(.bottom, 28 * s)
     }
 
-    private func details(_ s: CGFloat) -> some View {
+    private func passDetails(_ s: CGFloat) -> some View {
         VStack(spacing: 24 * s) {
-            HStack(alignment: .top, spacing: 28 * s) {
-                ticketField("CLIENTE", guest.fullName, .leading, s)
-                ticketField("ORARIO", italianTicketTime(event.date), .trailing, s)
+            HStack(alignment: .top, spacing: 26 * s) {
+                passField("CLIENTE", guest.fullName, .leading, s)
+                passField("ORARIO", italianTicketTime(event.date), .trailing, s)
             }
-            HStack(alignment: .top, spacing: 28 * s) {
-                ticketField("EVENTO", event.name, .leading, s)
-                ticketField("LOCALE", event.venue, .trailing, s)
+            HStack(alignment: .top, spacing: 26 * s) {
+                passField("EVENTO", event.name, .leading, s)
+                passField("LOCALE", event.venue, .trailing, s)
             }
-            HStack(alignment: .top, spacing: 28 * s) {
-                ticketField("PACCHETTO", guest.packageName, .leading, s)
-                ticketField("PREZZO", guest.price <= 0 ? "OMAGGIO" : guest.price.formatted(.currency(code: "EUR")), .trailing, s)
+            HStack(alignment: .top, spacing: 26 * s) {
+                passField("PACCHETTO", guest.packageName, .leading, s)
+                passField("PREZZO", guest.price <= 0 ? "OMAGGIO" : guest.price.formatted(.currency(code: "EUR")), .trailing, s)
             }
         }
         .padding(.horizontal, 42 * s)
         .padding(.vertical, 34 * s)
-        .background(Color.white.opacity(0.055))
+        .background(.white.opacity(0.06))
         .foregroundStyle(.white)
     }
 
-    private func tearLine(_ s: CGFloat) -> some View {
+    private func perforation(_ s: CGFloat) -> some View {
         ZStack {
             HStack(spacing: 10 * s) {
                 ForEach(0..<34, id: \.self) { _ in
-                    Capsule().fill(.white.opacity(0.32)).frame(width: 11 * s, height: 3 * s)
+                    Capsule().fill(.white.opacity(0.34)).frame(width: 11 * s, height: 3 * s)
                 }
-            }.clipped()
+            }
+            .clipped()
             HStack {
-                Circle().fill(Color(red: 0.94, green: 0.96, blue: 0.98)).frame(width: 38 * s).offset(x: -19 * s)
+                Circle().fill(Color.black.opacity(0.92)).frame(width: 38 * s).offset(x: -19 * s)
                 Spacer()
-                Circle().fill(Color(red: 0.94, green: 0.96, blue: 0.98)).frame(width: 38 * s).offset(x: 19 * s)
+                Circle().fill(Color.black.opacity(0.92)).frame(width: 38 * s).offset(x: 19 * s)
             }
         }
         .frame(height: 44 * s)
     }
 
-    private func qrSection(_ s: CGFloat) -> some View {
-        VStack(spacing: 20 * s) {
-            Text("MOSTRA QUESTO CODICE ALL’INGRESSO")
+    private func qrArea(_ s: CGFloat) -> some View {
+        VStack(spacing: 18 * s) {
+            Text("MOSTRA QUESTO QR ALL’INGRESSO")
                 .font(.system(size: 13 * s, weight: .bold))
-                .tracking(1.6 * s)
-                .foregroundStyle(.white.opacity(0.75))
+                .tracking(1.7 * s)
+                .foregroundStyle(.white.opacity(0.72))
+
             QRCodeImage(text: payload)
                 .frame(width: 390 * s, height: 390 * s)
-                .padding(24 * s)
-                .background(.white, in: RoundedRectangle(cornerRadius: 32 * s, style: .continuous))
-                .overlay { RoundedRectangle(cornerRadius: 32 * s).stroke(cyan.opacity(0.45), lineWidth: 3 * s) }
+                .padding(26 * s)
+                .background(.white, in: RoundedRectangle(cornerRadius: 34 * s, style: .continuous))
+                .shadow(color: .black.opacity(0.28), radius: 18 * s, y: 8 * s)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 34 * s)
     }
 
-    private func footer(_ s: CGFloat) -> some View {
+    private func passFooter(_ s: CGFloat) -> some View {
         VStack(spacing: 22 * s) {
             HStack(alignment: .top, spacing: 28 * s) {
-                ticketField("PR", prName, .leading, s)
-                ticketField("CODICE PR", prCode, .trailing, s)
+                passField("PR", prName, .leading, s)
+                passField("CODICE PR", prCode, .trailing, s)
             }
+
             HStack(spacing: 10 * s) {
-                Image(systemName: "checkmark.shield.fill").foregroundStyle(.green)
-                Text("QR personale • valido una sola volta")
+                Image(systemName: "checkmark.shield.fill")
+                    .foregroundStyle(.green)
+                Text("Personale • valido per un solo ingresso")
                     .font(.system(size: 15 * s, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.78))
             }
@@ -205,9 +229,11 @@ struct QRPassCard: View {
         .padding(.bottom, 40 * s)
     }
 
-    private func ticketField(_ title: String, _ value: String, _ alignment: TextAlignment, _ s: CGFloat) -> some View {
+    private func passField(_ title: String, _ value: String, _ alignment: TextAlignment, _ s: CGFloat) -> some View {
         VStack(alignment: alignment == .leading ? .leading : .trailing, spacing: 5 * s) {
-            Text(title).font(.system(size: 12 * s, weight: .bold)).foregroundStyle(.white.opacity(0.60))
+            Text(title)
+                .font(.system(size: 12 * s, weight: .bold))
+                .foregroundStyle(.white.opacity(0.58))
             Text(value)
                 .font(.system(size: 23 * s, weight: .bold, design: .rounded))
                 .multilineTextAlignment(alignment)
