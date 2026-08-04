@@ -259,7 +259,7 @@ struct GuestRow: View {
         HStack(spacing: 14) {
             Button(action: toggle) {
                 Image(systemName: guest.entered ? "checkmark.circle.fill" : "circle")
-                    .font(.title2).foregroundStyle(guest.entered ? .green : .secondary)
+                    .font(.title2).foregroundStyle(guest.entered ? Color.green : Color.secondary)
             }.buttonStyle(.plain)
 
             Button(action: toggle) {

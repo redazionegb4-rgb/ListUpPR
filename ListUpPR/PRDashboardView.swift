@@ -301,7 +301,7 @@ struct EventsView: View {
                         Label("\(guests.count) in lista", systemImage: "person.2.fill")
                         Spacer()
                         Label("\(entered) entrati", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(past ? .secondary : .green)
+                            .foregroundStyle(past ? Color.secondary : Color.green)
                     }
                     .font(.subheadline.bold())
                 }
