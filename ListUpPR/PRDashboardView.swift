@@ -8,7 +8,7 @@ struct PRMainView: View {
             EventsView().tabItem { Label("Eventi", systemImage: "calendar") }
             AllGuestsView().tabItem { Label("Clienti", systemImage: "person.3.fill") }
             SettingsView().tabItem { Label("Impostazioni", systemImage: "gearshape.fill") }
-        }.tint(.appPurple)
+        }.tint(.appCyan)
     }
 }
 
@@ -17,7 +17,7 @@ struct PRDashboardView: View {
     @State private var showNewEvent = false
     @State private var targetEvent: PREvent?
 
-    private var waiting: Int { model.totalPeople - model.enteredPeople }
+    private var waiting: Int { max(0, model.totalPeople - model.enteredPeople) }
     private var progress: Double { model.totalPeople == 0 ? 0 : Double(model.enteredPeople) / Double(model.totalPeople) }
 
     var body: some View {
@@ -43,43 +43,35 @@ struct PRDashboardView: View {
             }
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
-            .sheet(item: $targetEvent) { event in
-                AddGuestView(eventID: event.id)
-            }
+            .sheet(item: $targetEvent) { event in AddGuestView(eventID: event.id) }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        model.refreshFromStorage()
-                    } label: {
-                        Image(systemName: "arrow.clockwise.circle.fill")
-                            .font(.title3)
-                    }
-                    .accessibilityLabel("Aggiorna dati")
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button { model.refreshFromStorage() } label: {
+                        Image(systemName: "arrow.clockwise.circle.fill").font(.title3)
+                    }.accessibilityLabel("Aggiorna dati")
+                    Button { model.logout() } label: {
+                        Image(systemName: "rectangle.portrait.and.arrow.right").font(.title3)
+                    }.accessibilityLabel("Esci")
                 }
             }
         }
     }
 
     private var header: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Bentornato").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                Text(model.profile?.name ?? "PR").font(.system(size: 32, weight: .black, design: .rounded))
-            }
-            Spacer()
-            CodeBadge(code: model.profile?.code ?? "---")
-        }
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Bentornato").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text(model.profile?.name ?? "PR").font(.system(size: 32, weight: .black, design: .rounded))
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Panoramica liste").font(.headline)
-                    Text("Tutto sotto controllo in tempo reale").font(.caption).foregroundStyle(.white.opacity(0.75))
+                    Text("Panoramica eventi attivi").font(.headline)
+                    Text("Gli eventi passati non rientrano nei conteggi").font(.caption).foregroundStyle(.white.opacity(0.78))
                 }
-                Spacer()
-                Image(systemName: "sparkles").font(.title2.bold())
+                Spacer(); Image(systemName: "sparkles").font(.title2.bold())
             }
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -95,27 +87,20 @@ struct PRDashboardView: View {
             ProgressView(value: progress).tint(.white)
             HStack {
                 Label("\(model.totalPeople) clienti", systemImage: "person.2.fill")
-                Spacer()
-                Text("\(Int(progress * 100))% completato")
+                Spacer(); Text("\(Int(progress * 100))% completato")
             }.font(.caption.bold())
         }
-        .foregroundStyle(.white)
-        .padding(22)
-        .background(LinearGradient(colors: [.appIndigo, .appPurple, .appPink], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: .appPurple.opacity(0.28), radius: 24, y: 12)
+        .foregroundStyle(.white).padding(22)
+        .background(LinearGradient(colors: [Color(red: 0.02, green: 0.35, blue: 0.65), .appCyan], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: .appCyan.opacity(0.20), radius: 24, y: 12)
     }
 
     private var quickActions: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 18) {
             DashboardAction(icon: "calendar.badge.plus", title: "Nuovo evento") { showNewEvent = true }
             DashboardAction(icon: "person.badge.plus", title: "Aggiungi cliente") {
-                if let event = model.activeEvent ?? model.events.sorted(by: { $0.date > $1.date }).first {
-                    targetEvent = event
-                } else {
-                    showNewEvent = true
-                }
+                if let event = model.activeEvent { targetEvent = event } else { showNewEvent = true }
             }
-            DashboardAction(icon: "doc.on.doc", title: "Copia codice") { UIPasteboard.general.string = model.profile?.code }
         }
     }
 
@@ -124,20 +109,20 @@ struct PRDashboardView: View {
             Text("Ultimi clienti inseriti").font(.title3.bold())
             PremiumCard {
                 if model.allGuests.isEmpty {
-                    Text("Nessun cliente ancora inserito.").foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Nessun cliente negli eventi attivi.").foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(Array(model.allGuests.suffix(4).reversed())) { guest in
                             HStack(spacing: 12) {
                                 Image(systemName: guest.entered ? "checkmark.circle.fill" : "person.crop.circle")
-                                    .foregroundStyle(guest.entered ? .green : Color.appPurple).font(.title3)
+                                    .foregroundStyle(guest.entered ? .green : Color.appCyan).font(.title3)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(guest.fullName).font(.headline)
                                     Text(guest.packageName).font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
                             }.padding(.vertical, 10)
-                            if guest.id != model.allGuests.suffix(4).first?.id { Divider() }
+                            Divider()
                         }
                     }
                 }
@@ -158,18 +143,6 @@ struct DashboardAction: View {
     }
 }
 
-struct CodeBadge: View {
-    let code: String
-    var body: some View {
-        Button { UIPasteboard.general.string = code } label: {
-            VStack(spacing: 2) {
-                Text("CODICE").font(.caption2.bold()).foregroundStyle(.secondary)
-                HStack(spacing: 5) { Text(code).font(.title2.bold().monospacedDigit()); Image(systemName: "doc.on.doc") }
-            }.padding(.horizontal, 14).padding(.vertical, 9).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16))
-        }.buttonStyle(.plain)
-    }
-}
-
 struct LargeEventCard: View {
     let event: PREvent; let guests: [Guest]
     var body: some View {
@@ -178,17 +151,16 @@ struct LargeEventCard: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(event.name).font(.title2.bold())
-                        Text(event.date < .now ? "Evento trascorso" : "Evento programmato").font(.caption.bold()).foregroundStyle(event.date < .now ? Color.gray : Color.appPurple)
+                        Text("Evento programmato").font(.caption.bold()).foregroundStyle(Color.appCyan)
                     }
-                    Spacer(); Image(systemName: "chevron.right.circle.fill").font(.title2).foregroundStyle(Color.appPurple)
+                    Spacer(); Image(systemName: "chevron.right.circle.fill").font(.title2).foregroundStyle(Color.appCyan)
                 }
                 Label(event.venue, systemImage: "mappin.and.ellipse")
                 Label(event.date.formatted(date: .long, time: .shortened), systemImage: "calendar.badge.clock")
                 Divider()
                 HStack {
                     Label("\(guests.count) in lista", systemImage: "person.2.fill")
-                    Spacer()
-                    Label("\(guests.filter(\.entered).count) entrati", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                    Spacer(); Label("\(guests.filter(\.entered).count) entrati", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
                 }.font(.subheadline)
             }
         }
@@ -201,9 +173,9 @@ struct EmptyEventCard: View {
         PremiumCard {
             VStack(spacing: 12) {
                 GradientIcon(systemName: "calendar.badge.plus")
-                Text("Nessun evento").font(.title3.bold())
-                Text("Crea la prima serata e inizia ad aggiungere clienti.").foregroundStyle(.secondary).multilineTextAlignment(.center)
-                Button("Crea evento", action: action).buttonStyle(.borderedProminent).tint(.appPurple)
+                Text("Nessun evento attivo").font(.title3.bold())
+                Text("Crea la prossima serata e inizia ad aggiungere clienti.").foregroundStyle(.secondary).multilineTextAlignment(.center)
+                Button("Crea evento", action: action).buttonStyle(.borderedProminent).tint(.appCyan)
             }.frame(maxWidth: .infinity)
         }
     }
@@ -215,27 +187,38 @@ struct EventsView: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(model.events.sorted { $0.date > $1.date }) { event in
-                    NavigationLink(value: event) {
-                        HStack(spacing: 13) {
-                            GradientIcon(systemName: "music.note.list")
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(event.name).font(.headline)
-                                Text("\(event.venue) • \(event.date.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
-                                let guests = model.guestsByEvent[event.id] ?? []
-                                Text("\(guests.filter(\.entered).count) entrati su \(guests.count)").font(.caption2.bold()).foregroundStyle(Color.appPurple)
-                            }
-                        }.padding(.vertical, 5)
-                    }.swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina", systemImage: "trash") }
-                        Button { _ = model.duplicateEvent(event) } label: { Label("Duplica", systemImage: "plus.square.on.square") }.tint(.appPurple)
-                    }
+                if !model.upcomingEvents.isEmpty {
+                    Section("Eventi attivi") { eventRows(model.upcomingEvents, past: false) }
                 }
-            }.navigationTitle("Eventi")
+                if !model.pastEvents.isEmpty {
+                    Section("Eventi passati") { eventRows(model.pastEvents, past: true) }
+                }
+            }
+            .navigationTitle("Eventi")
             .overlay { if model.events.isEmpty { ContentUnavailableView("Nessun evento", systemImage: "calendar", description: Text("Crea il primo evento.")) } }
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showNewEvent = true } label: { Image(systemName: "plus.circle.fill") } } }
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
+        }
+    }
+
+    @ViewBuilder private func eventRows(_ events: [PREvent], past: Bool) -> some View {
+        ForEach(events) { event in
+            NavigationLink(value: event) {
+                HStack(spacing: 13) {
+                    GradientIcon(systemName: past ? "clock.arrow.circlepath" : "music.note.list")
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(event.name).font(.headline)
+                        Text("\(event.venue) • \(event.date.formatted(date: .abbreviated, time: .shortened))").font(.caption).foregroundStyle(.secondary)
+                        let guests = model.guestsByEvent[event.id] ?? []
+                        Text(past ? "Storico: \(guests.filter(\.entered).count) entrati su \(guests.count)" : "\(guests.filter(\.entered).count) entrati su \(guests.count)")
+                            .font(.caption2.bold()).foregroundStyle(past ? .secondary : Color.appCyan)
+                    }
+                }.padding(.vertical, 5)
+            }.swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) { model.deleteEvent(event) } label: { Label("Elimina", systemImage: "trash") }
+                Button { _ = model.duplicateEvent(event) } label: { Label("Duplica", systemImage: "plus.square.on.square") }.tint(.appCyan)
+            }
         }
     }
 }
@@ -243,63 +226,75 @@ struct EventsView: View {
 struct AllGuestsView: View {
     @EnvironmentObject var model: AppModel
     @State private var search = ""
-    @State private var editingGuest: Guest?
+    @State private var editingPair: GuestEventPair?
     @State private var deletingPair: GuestEventPair?
     @State private var qrPair: GuestEventPair?
+    @State private var showPast = false
 
-    var filtered: [(PREvent, Guest)] {
-        model.events.flatMap { event in (model.guestsByEvent[event.id] ?? []).map { (event, $0) } }
-            .filter { search.isEmpty || $0.1.fullName.localizedCaseInsensitiveContains(search) || $0.1.phone?.contains(search) == true }
+    private var sourceEvents: [PREvent] { showPast ? model.pastEvents : model.upcomingEvents }
+    private var filtered: [GuestEventPair] {
+        sourceEvents.flatMap { event in (model.guestsByEvent[event.id] ?? []).map { GuestEventPair(event: event, guest: $0) } }
+            .filter { search.isEmpty || $0.guest.fullName.localizedCaseInsensitiveContains(search) || $0.guest.packageName.localizedCaseInsensitiveContains(search) || $0.guest.phone?.contains(search) == true }
+            .sorted { $0.guest.fullName.localizedCaseInsensitiveCompare($1.guest.fullName) == .orderedAscending }
     }
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filtered.indices, id: \.self) { index in
-                    let event = filtered[index].0
-                    let guest = filtered[index].1
-                    HStack(spacing: 12) {
-                        Image(systemName: guest.entered ? "checkmark.circle.fill" : "person.crop.circle.fill")
-                            .font(.title2).foregroundStyle(guest.entered ? .green : Color.appCyan)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(guest.fullName).font(.headline)
-                            Text("\(event.name) • \(guest.packageName)").font(.caption).foregroundStyle(.secondary)
-                            if let phone = guest.phone, !phone.isEmpty { Text(phone).font(.caption2).foregroundStyle(.secondary) }
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    LazyVStack(spacing: 14) {
+                        Picker("Archivio", selection: $showPast) {
+                            Text("Eventi attivi").tag(false); Text("Eventi passati").tag(true)
+                        }.pickerStyle(.segmented)
+
+                        if filtered.isEmpty {
+                            ContentUnavailableView(showPast ? "Nessun cliente nello storico" : "Nessun cliente", systemImage: "person.3", description: Text(search.isEmpty ? "I clienti appariranno qui." : "Prova una ricerca diversa."))
+                                .padding(.top, 60)
+                        } else {
+                            ForEach(filtered) { pair in clientCard(pair) }
                         }
-                        Spacer()
-                        Menu {
-                            Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") }
-                            Button { qrPair = GuestEventPair(event: event, guest: guest) } label: { Label("Visualizza e condividi QR", systemImage: "qrcode") }
-                            Button(role: .destructive) { deletingPair = GuestEventPair(event: event, guest: guest) } label: { Label("Elimina cliente", systemImage: "trash") }
-                        } label: {
-                            Image(systemName: "ellipsis.circle.fill").font(.title2).foregroundStyle(Color.appCyan).padding(6)
-                        }
-                    }.padding(.vertical, 4)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button { editingGuest = guest } label: { Label("Modifica", systemImage: "pencil") }.tint(.blue)
-                        Button(role: .destructive) { deletingPair = GuestEventPair(event: event, guest: guest) } label: { Label("Elimina", systemImage: "trash") }
-                    }
+                    }.padding(20)
                 }
             }
             .navigationTitle("Clienti")
-            .searchable(text: $search, prompt: "Cerca nome o telefono")
-            .overlay { if filtered.isEmpty { ContentUnavailableView("Nessun cliente", systemImage: "person.3") } }
-            .sheet(item: $editingGuest) { guest in
-                if let event = model.events.first(where: { (model.guestsByEvent[$0.id] ?? []).contains(where: { $0.id == guest.id }) }) {
-                    EditGuestView(eventID: event.id, guest: guest)
-                }
-            }
-            .sheet(item: $qrPair) { pair in
-                GuestQRCodeView(guest: pair.guest, event: pair.event, prCode: model.profile?.code ?? "", prName: model.profile?.name ?? "PR")
-            }
+            .searchable(text: $search, prompt: "Cerca nome, telefono o pacchetto")
+            .sheet(item: $editingPair) { pair in EditGuestView(eventID: pair.event.id, guest: pair.guest) }
+            .sheet(item: $qrPair) { pair in GuestQRCodeView(guest: pair.guest, event: pair.event, prCode: model.profile?.code ?? "", prName: model.profile?.name ?? "PR") }
             .alert("Eliminare il cliente?", isPresented: Binding(get: { deletingPair != nil }, set: { if !$0 { deletingPair = nil } })) {
                 Button("Annulla", role: .cancel) { deletingPair = nil }
-                Button("Elimina", role: .destructive) {
-                    if let pair = deletingPair { model.deleteGuest(pair.guest, eventID: pair.event.id) }
-                    deletingPair = nil
+                Button("Elimina", role: .destructive) { if let pair = deletingPair { model.deleteGuest(pair.guest, eventID: pair.event.id) }; deletingPair = nil }
+            } message: { Text(deletingPair.map { "\($0.guest.fullName) verrà eliminato dall’evento \($0.event.name)." } ?? "") }
+        }
+    }
+
+    private func clientCard(_ pair: GuestEventPair) -> some View {
+        PremiumCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top) {
+                    ZStack {
+                        Circle().fill((pair.guest.entered ? Color.green : Color.appCyan).opacity(0.15)).frame(width: 48, height: 48)
+                        Image(systemName: pair.guest.entered ? "checkmark.circle.fill" : "person.fill").foregroundStyle(pair.guest.entered ? .green : Color.appCyan)
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(pair.guest.fullName).font(.title3.bold())
+                        Text("\(pair.event.name) • \(pair.guest.packageName)").font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(pair.guest.entered ? "ENTRATO" : "DA ENTRARE").font(.caption2.bold()).padding(.horizontal, 9).padding(.vertical, 6)
+                        .background((pair.guest.entered ? Color.green : Color.orange).opacity(0.14), in: Capsule())
+                        .foregroundStyle(pair.guest.entered ? .green : .orange)
                 }
-            } message: {
-                Text(deletingPair.map { "\($0.guest.fullName) verrà eliminato dall’evento \($0.event.name)." } ?? "")
+                HStack {
+                    Label(pair.guest.price <= 0 ? "Omaggio" : pair.guest.price.formatted(.currency(code: "EUR")), systemImage: "eurosign.circle")
+                    Spacer()
+                    if let phone = pair.guest.phone, !phone.isEmpty { Label(phone, systemImage: "phone.fill") }
+                }.font(.caption).foregroundStyle(.secondary)
+                HStack(spacing: 10) {
+                    Button { qrPair = pair } label: { Label("QR", systemImage: "qrcode") }.buttonStyle(.borderedProminent).tint(.appCyan)
+                    Button { editingPair = pair } label: { Label("Modifica", systemImage: "pencil") }.buttonStyle(.bordered)
+                    Button(role: .destructive) { deletingPair = pair } label: { Image(systemName: "trash") }.buttonStyle(.bordered)
+                }
             }
         }
     }
@@ -361,7 +356,6 @@ struct SettingsView: View {
                 Spacer()
                 Menu {
                     Button { showName = true } label: { Label("Modifica nome", systemImage: "pencil") }
-                    Button { UIPasteboard.general.string = model.profile?.code } label: { Label("Copia codice", systemImage: "doc.on.doc") }
                 } label: {
                     Image(systemName: "ellipsis.circle.fill").font(.title2).foregroundStyle(Color.appPurple)
                 }
@@ -437,7 +431,7 @@ struct SettingsView: View {
                     Label("Cambia password di accesso", systemImage: "key.fill").frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .buttonStyle(.bordered)
-                Text("Condividi il codice a 3 cifre soltanto con gli addetti autorizzati.").font(.caption).foregroundStyle(.secondary)
+                Text("Usa username e password per accedere in modo sicuro al tuo profilo PR.").font(.caption).foregroundStyle(.secondary)
             }
         }
     }

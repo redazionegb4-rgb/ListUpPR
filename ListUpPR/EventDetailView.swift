@@ -399,9 +399,12 @@ struct QuickAddGuestsView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
     let eventID: UUID
-    @State private var names = ""; @State private var listName = ""; @State private var packageName = "Ingresso"
-    @State private var price = 0.0
+    @State private var names = ""
+    @State private var listName = ""
+    @State private var packageName = "Ingresso standard"
+    @State private var priceText = ""
 
+    private var price: Double { Double(priceText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
     private var parsedNames: [(String, String)] {
         names.split(whereSeparator: \.isNewline).compactMap { line in
             let clean = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -410,28 +413,84 @@ struct QuickAddGuestsView: View {
             return (parts[0], parts.count > 1 ? parts[1] : "")
         }
     }
+    private var duplicateCount: Int {
+        parsedNames.filter { model.hasDuplicateGuest(firstName: $0.0, lastName: $0.1, eventID: eventID) }.count
+    }
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Nominativi") {
-                    TextEditor(text: $names).frame(minHeight: 150)
-                    Text("Scrivi una persona per riga.").font(.footnote).foregroundStyle(.secondary)
-                }
-                Section("Dati comuni") {
-                    TextField("Nome lista", text: $listName)
-                    TextField("Pacchetto scelto", text: $packageName)
-                    TextField("Prezzo per persona", value: $price, format: .number).keyboardType(.decimalPad)
-                }
-                Button("Aggiungi \(parsedNames.count) clienti") {
-                    for (first, last) in parsedNames where !model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) {
-                        model.addGuest(Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: price, deposit: 0, notes: ""), to: eventID)
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 18) {
+                        VStack(spacing: 8) {
+                            GradientIcon(systemName: "person.3.sequence.fill")
+                            Text("Inserimento rapido").font(.system(size: 30, weight: .black, design: .rounded))
+                            Text("Aggiungi più clienti in una sola volta, uno per ogni riga.").foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        }
+
+                        PremiumCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Label("Nominativi", systemImage: "list.bullet.rectangle.fill").font(.headline)
+                                TextEditor(text: $names)
+                                    .frame(minHeight: 190)
+                                    .padding(10)
+                                    .scrollContentBackground(.hidden)
+                                    .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+                                Text("Esempio:\nMario Rossi\nLuca Bianchi\nSara Verdi")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+
+                        PremiumCard {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Label("Dati comuni", systemImage: "slider.horizontal.3").font(.headline)
+                                labeledField("Nome lista", placeholder: "Es. Lista Demetrio", text: $listName, icon: "text.badge.star")
+                                labeledField("Pacchetto", placeholder: "Es. Ingresso gold", text: $packageName, icon: "ticket.fill")
+                                labeledField("Prezzo a persona", placeholder: "Es. 20,00", text: $priceText, icon: "eurosign.circle.fill", keyboard: .decimalPad)
+                            }
+                        }
+
+                        HStack(spacing: 10) {
+                            metric("\(parsedNames.count)", "Rilevati", .appCyan)
+                            metric("\(duplicateCount)", "Duplicati", .orange)
+                            metric("\(max(0, parsedNames.count - duplicateCount))", "Da aggiungere", .green)
+                        }
+
+                        Button {
+                            for (first, last) in parsedNames where !model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) {
+                                model.addGuest(Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: price, deposit: 0, notes: ""), to: eventID)
+                            }
+                            dismiss()
+                        } label: {
+                            Label("Aggiungi \(max(0, parsedNames.count - duplicateCount)) clienti", systemImage: "person.badge.plus")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(parsedNames.isEmpty || parsedNames.count == duplicateCount)
                     }
-                    dismiss()
-                }.disabled(parsedNames.isEmpty)
-            }.navigationTitle("Inserimento rapido")
+                    .padding(20)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
+    }
+
+    private func labeledField(_ title: String, placeholder: String, text: Binding<String>, icon: String, keyboard: UIKeyboardType = .default) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption.bold()).foregroundStyle(.secondary)
+            HStack {
+                Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 22)
+                TextField(placeholder, text: text).keyboardType(keyboard)
+            }.padding(13).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 15))
+        }
+    }
+
+    private func metric(_ value: String, _ title: String, _ color: Color) -> some View {
+        VStack(spacing: 5) {
+            Text(value).font(.title2.bold().monospacedDigit()).foregroundStyle(color)
+            Text(title).font(.caption2).foregroundStyle(.secondary)
+        }.frame(maxWidth: .infinity).padding(.vertical, 13).background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 

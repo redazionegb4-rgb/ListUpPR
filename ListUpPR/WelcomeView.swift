@@ -12,7 +12,7 @@ struct WelcomeView: View {
                 Spacer(minLength: 36)
                 BrandMark().padding(.bottom, 4)
                 VStack(spacing: 8) {
-                    Text("Guestly PR").font(.system(size: 40, weight: .black, design: .rounded))
+                    Text("ListUp PR").font(.system(size: 40, weight: .black, design: .rounded))
                     Text("La tua serata, organizzata bene.").font(.title3.weight(.medium))
                     Text("Liste, pacchetti e ingressi sincronizzati in un’unica app.")
                         .foregroundStyle(.secondary).multilineTextAlignment(.center)
@@ -310,6 +310,8 @@ struct QRScanResultView: View {
                             resultRow(icon: "number", title: "Codice PR", value: result.prCode.isEmpty ? "—" : result.prCode)
                             Divider()
                             resultRow(icon: "calendar", title: "Evento", value: result.eventName.isEmpty ? "—" : result.eventName)
+                            Divider()
+                            resultRow(icon: "calendar.badge.clock", title: "Data evento", value: result.eventDate.isEmpty ? "—" : result.eventDate)
                         }
                     }
 
