@@ -82,6 +82,7 @@ struct PRLoginView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var error = false
+    @State private var showRecovery = false
 
     var body: some View {
         NavigationStack {
@@ -113,12 +114,19 @@ struct PRLoginView: View {
                         .buttonStyle(PrimaryButtonStyle())
                         .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
 
+                        Button("Hai dimenticato username o password?") {
+                            showRecovery = true
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.appCyan)
+
                         Text("L’username identifica in modo univoco il tuo profilo, anche quando altri PR scelgono la stessa password.")
                             .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     .padding(22)
                 }
             }
+            .sheet(isPresented: $showRecovery) { ForgotCredentialsView() }
             .navigationTitle("Accesso PR")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
@@ -133,6 +141,7 @@ struct RegisterPRView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var confirm = ""
+    @State private var recoveryPIN = ""
     @State private var showError = false
 
     private var normalizedUsername: String { username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
@@ -154,6 +163,7 @@ struct RegisterPRView: View {
                                 ModernAccessField(icon: "at", title: "Username", placeholder: "Es. demetrio.pr", text: $username)
                                 ModernSecureField(icon: "lock.fill", title: "Password", placeholder: "Minimo 4 caratteri", text: $password)
                                 ModernSecureField(icon: "checkmark.shield.fill", title: "Conferma password", placeholder: "Ripeti la password", text: $confirm)
+                                ModernAccessField(icon: "key.fill", title: "PIN di recupero", placeholder: "6 cifre", text: $recoveryPIN, keyboard: .numberPad)
                             }
                         }
 
@@ -161,6 +171,7 @@ struct RegisterPRView: View {
                             Label("Username da 4 a 24 caratteri", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
                             Label("Usa lettere, numeri, punto o trattino basso", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
                             Label("Password uguali tra PR diversi sono consentite", systemImage: "checkmark.circle.fill")
+                            Label("Conserva il PIN: serve per recuperare l’accesso", systemImage: recoveryPIN.filter(\.isNumber).count == 6 ? "checkmark.circle.fill" : "circle")
                         }
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -174,7 +185,7 @@ struct RegisterPRView: View {
 
                         Button {
                             guard password == confirm,
-                                  model.registerPR(name: name, username: normalizedUsername, password: password) else {
+                                  model.registerPR(name: name, username: normalizedUsername, password: password, recoveryPIN: recoveryPIN) else {
                                 showError = true
                                 return
                             }
@@ -183,7 +194,7 @@ struct RegisterPRView: View {
                             Label("Crea profilo PR", systemImage: "checkmark.circle.fill")
                         }
                         .buttonStyle(PrimaryButtonStyle())
-                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !usernameFormatValid || password.count < 4 || password != confirm)
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !usernameFormatValid || password.count < 4 || password != confirm || recoveryPIN.filter(\.isNumber).count != 6)
                     }
                     .padding(22)
                 }
@@ -210,12 +221,13 @@ private func accessHero(icon: String, title: String, subtitle: String) -> some V
 struct ModernAccessField: View {
     let icon: String, title: String, placeholder: String
     @Binding var text: String
+    var keyboard: UIKeyboardType = .default
     var body: some View {
         HStack(spacing: 13) {
             Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                TextField(placeholder, text: $text).textInputAutocapitalization(.never).autocorrectionDisabled()
+                TextField(placeholder, text: $text).keyboardType(keyboard).textInputAutocapitalization(.never).autocorrectionDisabled()
             }
         }
         .padding(14).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
@@ -234,6 +246,70 @@ struct ModernSecureField: View {
             }
         }
         .padding(14).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+struct ForgotCredentialsView: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) var dismiss
+    @State private var prName = ""
+    @State private var username = ""
+    @State private var pin = ""
+    @State private var newPassword = ""
+    @State private var recoveredUsername: String?
+    @State private var message = ""
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                ScrollView {
+                    VStack(spacing: 20) {
+                        accessHero(icon: "key.viewfinder", title: "Recupera accesso", subtitle: "Usa il PIN di recupero scelto durante la registrazione")
+
+                        PremiumCard {
+                            VStack(spacing: 15) {
+                                ModernAccessField(icon: "person.fill", title: "Nome PR", placeholder: "Nome del profilo", text: $prName)
+                                ModernAccessField(icon: "number", title: "PIN di recupero", placeholder: "6 cifre", text: $pin, keyboard: .numberPad)
+                                Button("Recupera username") {
+                                    recoveredUsername = model.recoverUsername(prName: prName, recoveryPIN: pin)
+                                    message = recoveredUsername == nil ? "Dati di recupero non riconosciuti." : "Username recuperato: \(recoveredUsername!)"
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.appCyan)
+                            }
+                        }
+
+                        PremiumCard {
+                            VStack(spacing: 15) {
+                                ModernAccessField(icon: "at", title: "Username", placeholder: "Il tuo username", text: $username)
+                                ModernAccessField(icon: "number", title: "PIN di recupero", placeholder: "6 cifre", text: $pin, keyboard: .numberPad)
+                                ModernSecureField(icon: "lock.rotation", title: "Nuova password", placeholder: "Minimo 4 caratteri", text: $newPassword)
+                                Button("Imposta nuova password") {
+                                    if model.resetPassword(username: username, recoveryPIN: pin, newPassword: newPassword) {
+                                        message = "Password aggiornata correttamente."
+                                    } else {
+                                        message = "Username, PIN o nuova password non validi."
+                                    }
+                                }
+                                .buttonStyle(PrimaryButtonStyle())
+                                .disabled(username.isEmpty || pin.filter(\.isNumber).count != 6 || newPassword.count < 4)
+                            }
+                        }
+
+                        if !message.isEmpty {
+                            Text(message)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(message.contains("correttamente") || message.contains("recuperato") ? Color.green : Color.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(22)
+                }
+            }
+            .safeAreaInset(edge: .top, spacing: 0) { FixedModalHeader(title: "Recupero accesso", onClose: { dismiss() }) }
+            .toolbar(.hidden, for: .navigationBar)
+        }
     }
 }
 

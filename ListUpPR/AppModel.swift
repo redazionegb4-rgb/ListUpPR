@@ -33,6 +33,7 @@ struct PRProfile: Codable, Hashable {
     var code: String
     var password: String
     var username: String? = nil
+    var recoveryPIN: String? = nil
 
     var loginUsername: String { username ?? code }
 }
@@ -105,10 +106,11 @@ final class AppModel: ObservableObject {
     var enteredPeople: Int { activeGuests.filter(\.entered).count }
     var activeEvent: PREvent? { upcomingEvents.first(where: { $0.isActive }) ?? upcomingEvents.first }
 
-    func registerPR(name: String, username: String, password: String) -> Bool {
+    func registerPR(name: String, username: String, password: String, recoveryPIN: String) -> Bool {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4 else { return false }
+        let cleanPIN = recoveryPIN.filter(\.isNumber)
+        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4, cleanPIN.count == 6 else { return false }
         commitActiveAccount()
         guard !accounts.contains(where: { $0.profile.loginUsername.lowercased() == cleanUsername }) else { return false }
         let usedCodes = Set(accounts.map { $0.profile.code })
@@ -116,7 +118,7 @@ final class AppModel: ObservableObject {
         guard let code = availableCodes.randomElement() else { return false }
         let account = PRAccount(
             id: UUID(),
-            profile: PRProfile(name: cleanName, code: code, password: password, username: cleanUsername),
+            profile: PRProfile(name: cleanName, code: code, password: password, username: cleanUsername, recoveryPIN: cleanPIN),
             events: [],
             guestsByEvent: [:],
             createdAt: .now
@@ -138,6 +140,30 @@ final class AppModel: ObservableObject {
               }) else { return false }
         activate(match)
         selectedRole = .pr
+        save()
+        return true
+    }
+
+
+    func recoverUsername(prName: String, recoveryPIN: String) -> String? {
+        let cleanName = prName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanPIN = recoveryPIN.filter(\.isNumber)
+        guard cleanPIN.count == 6 else { return nil }
+        return accounts.first(where: {
+            $0.profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == cleanName &&
+            $0.profile.recoveryPIN == cleanPIN
+        })?.profile.loginUsername
+    }
+
+    func resetPassword(username: String, recoveryPIN: String, newPassword: String) -> Bool {
+        let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanPIN = recoveryPIN.filter(\.isNumber)
+        guard cleanPIN.count == 6, newPassword.count >= 4,
+              let index = accounts.firstIndex(where: {
+                  $0.profile.loginUsername.lowercased() == cleanUsername && $0.profile.recoveryPIN == cleanPIN
+              }) else { return false }
+        accounts[index].profile.password = newPassword
+        if activeAccountID == accounts[index].id { profile = accounts[index].profile }
         save()
         return true
     }

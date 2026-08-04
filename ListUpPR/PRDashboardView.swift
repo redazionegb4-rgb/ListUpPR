@@ -295,21 +295,17 @@ struct EventsView: View {
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
             .sheet(item: $editingEvent) { EditEventView(event: $0) }
-            .confirmationDialog(
-                "Gestisci evento",
-                isPresented: Binding(
-                    get: { deletingEvent != nil },
-                    set: { if !$0 { deletingEvent = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Elimina definitivamente", role: .destructive) {
+            .alert("Elimina evento?", isPresented: Binding(
+                get: { deletingEvent != nil },
+                set: { if !$0 { deletingEvent = nil } }
+            )) {
+                Button("Annulla", role: .cancel) { deletingEvent = nil }
+                Button("Elimina", role: .destructive) {
                     if let event = deletingEvent { model.deleteEvent(event) }
                     deletingEvent = nil
                 }
-                Button("Annulla", role: .cancel) { deletingEvent = nil }
             } message: {
-                Text(deletingEvent.map { "Vuoi eliminare l’evento \($0.name) e tutti i clienti collegati?" } ?? "")
+                Text(deletingEvent.map { "Verranno eliminati definitivamente l’evento ‘\($0.name)’ e tutti i clienti collegati. Questa operazione non può essere annullata." } ?? "")
             }
         }
     }
