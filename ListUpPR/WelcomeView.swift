@@ -4,7 +4,7 @@ struct WelcomeView: View {
     @EnvironmentObject var model: AppModel
     @State private var sheet: AccessSheet?
 
-    enum AccessSheet: Identifiable { case login, register, entrance; var id: Int { hashValue } }
+    enum AccessSheet: Identifiable { case login, register, scanner; var id: Int { hashValue } }
 
     var body: some View {
         ScrollView {
@@ -24,7 +24,7 @@ struct WelcomeView: View {
                     }.buttonStyle(PrimaryButtonStyle())
 
                     AccessCard(icon: "sparkles", eyebrow: "PRIMO ACCESSO?", title: "Registrati come PR", tint: .appPurple) { sheet = .register }
-                    AccessCard(icon: "checkmark.shield.fill", eyebrow: "ADDETTO ALL’INGRESSO?", title: "Accedi con il codice", tint: .appCyan) { sheet = .entrance }
+                    AccessCard(icon: "qrcode.viewfinder", eyebrow: "INGRESSO CLIENTI", title: "Scansiona QR ingresso", tint: .appCyan) { sheet = .scanner }
                 }
 
                 HStack(spacing: 8) {
@@ -38,7 +38,7 @@ struct WelcomeView: View {
             switch item {
             case .login: PRLoginView()
             case .register: RegisterPRView()
-            case .entrance: EntranceLoginView()
+            case .scanner: GlobalEntranceScannerView()
             }
         }
     }
@@ -138,6 +138,53 @@ struct RegisterPRView: View {
             }
             .navigationTitle("Nuovo profilo PR")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+        }
+    }
+}
+
+struct GlobalEntranceScannerView: View {
+    @EnvironmentObject var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var showScanner = true
+    @State private var resultMessage = ""
+    @State private var showResult = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppBackground()
+                VStack(spacing: 22) {
+                    Spacer()
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: 72, weight: .semibold))
+                        .foregroundStyle(Color.appCyan)
+                    Text("Scanner ingresso")
+                        .font(.largeTitle.bold())
+                    Text("Inquadra il QR di qualsiasi cliente. L’app riconosce automaticamente evento, lista e nominativo e aggiorna il relativo ingresso.")
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    Button { showScanner = true } label: {
+                        Label("Apri fotocamera", systemImage: "camera.viewfinder")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                    Spacer()
+                }
+                .padding(24)
+            }
+            .navigationTitle("Ingresso QR")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Chiudi") { dismiss() } } }
+            .sheet(isPresented: $showScanner) {
+                QRScannerSheet { code in
+                    resultMessage = model.checkInFromQRCodeGlobally(code)
+                    showResult = true
+                }
+            }
+            .alert("Esito scansione", isPresented: $showResult) {
+                Button("Scansiona altro") { showScanner = true }
+                Button("Chiudi", role: .cancel) { dismiss() }
+            } message: { Text(resultMessage) }
         }
     }
 }

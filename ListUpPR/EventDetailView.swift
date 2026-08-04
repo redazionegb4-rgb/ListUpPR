@@ -56,6 +56,24 @@ struct EventDetailView: View {
 
     private var progress: Double { guests.isEmpty ? 0 : Double(guests.filter(\.entered).count) / Double(guests.count) }
 
+    private var emptyTitle: String {
+        if !search.isEmpty { return "Nessun cliente trovato" }
+        switch filter {
+        case .all: return "Lista ancora vuota"
+        case .waiting: return "Nessun cliente in attesa"
+        case .entered: return "Nessun ingresso registrato"
+        }
+    }
+
+    private var emptyMessage: String {
+        if !search.isEmpty { return "Prova a modificare la ricerca o il filtro selezionato." }
+        switch filter {
+        case .all: return entranceMode ? "Il PR non ha ancora inserito clienti per questo evento." : "Aggiungi il primo cliente dal menu in alto."
+        case .waiting: return "Tutti i clienti presenti in lista risultano già entrati."
+        case .entered: return "Gli ingressi confermati appariranno qui."
+        }
+    }
+
     var body: some View {
         List {
             Section {
@@ -93,6 +111,22 @@ struct EventDetailView: View {
             }
 
             Section("Lista clienti") {
+                if filtered.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: filter == .entered ? "person.crop.circle.badge.checkmark" : "person.crop.circle.badge.questionmark")
+                            .font(.system(size: 30))
+                            .foregroundStyle(.secondary)
+                        Text(emptyTitle)
+                            .font(.headline)
+                        Text(emptyMessage)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+                    .listRowBackground(Color.clear)
+                }
                 ForEach(filtered) { guest in
                     GuestRow(
                         guest: guest,
@@ -132,13 +166,6 @@ struct EventDetailView: View {
         .navigationTitle(event.name)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, prompt: "Cerca nome, telefono, lista o pacchetto")
-        .overlay {
-            if guests.isEmpty {
-                ContentUnavailableView("Lista vuota", systemImage: "person.badge.plus", description: Text(entranceMode ? "Il PR non ha ancora inserito clienti." : "Aggiungi il primo cliente all’evento."))
-            } else if filtered.isEmpty {
-                ContentUnavailableView("Nessun risultato", systemImage: "magnifyingglass")
-            }
-        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if entranceMode {

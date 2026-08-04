@@ -173,6 +173,35 @@ final class AppModel: ObservableObject {
         return "Ingresso confermato: \(guests[index].fullName)"
     }
 
+    func checkInFromQRCodeGlobally(_ encoded: String) -> String {
+        let prefix = "LISTUPPR|2|"
+        guard encoded.hasPrefix(prefix),
+              let data = Data(base64Encoded: String(encoded.dropFirst(prefix.count))),
+              let payload = try? decoder.decode(GuestQRPayload.self, from: data),
+              payload.version == 2 else { return "QR non valido o non generato da Guestly PR" }
+
+        guard let event = events.first(where: { $0.id == payload.eventID }) else {
+            return "Evento non trovato su questo dispositivo. Aggiorna i dati e riprova."
+        }
+        guard var guests = guestsByEvent[payload.eventID],
+              let index = guests.firstIndex(where: { $0.id == payload.guestID }) else {
+            return "Cliente non trovato nella lista di \(event.name)"
+        }
+        guard payload.token == guests[index].effectiveQRToken else {
+            return "QR non valido per questo cliente"
+        }
+        if guests[index].entered {
+            return "\(guests[index].fullName) risulta già entrato a \(event.name)"
+        }
+
+        guests[index].entered = true
+        guests[index].entryTime = .now
+        guestsByEvent[payload.eventID] = guests
+        lastEntry = (payload.eventID, payload.guestID)
+        save()
+        return "Ingresso confermato: \(guests[index].fullName)\nEvento: \(event.name)\nPR: \(payload.prCode)"
+    }
+
     func toggleEntry(guestID: UUID, eventID: UUID) {
         guard var guests = guestsByEvent[eventID],
               let index = guests.firstIndex(where: { $0.id == guestID }) else { return }
