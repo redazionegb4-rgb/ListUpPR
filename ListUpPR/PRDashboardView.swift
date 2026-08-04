@@ -235,10 +235,14 @@ struct EventsView: View {
 struct AllGuestsView: View {
     @EnvironmentObject var model: AppModel
     @State private var search = ""
+    @State private var editingGuest: Guest?
+    @State private var deletingPair: GuestEventPair?
+
     var filtered: [(PREvent, Guest)] {
         model.events.flatMap { event in (model.guestsByEvent[event.id] ?? []).map { (event, $0) } }
             .filter { search.isEmpty || $0.1.fullName.localizedCaseInsensitiveContains(search) || $0.1.phone?.contains(search) == true }
     }
+
     var body: some View {
         NavigationStack {
             List {
@@ -246,18 +250,50 @@ struct AllGuestsView: View {
                     let event = filtered[index].0
                     let guest = filtered[index].1
                     HStack(spacing: 12) {
-                        Image(systemName: guest.entered ? "checkmark.circle.fill" : "person.crop.circle.fill").font(.title2).foregroundStyle(guest.entered ? .green : Color.appPurple)
+                        Image(systemName: guest.entered ? "checkmark.circle.fill" : "person.crop.circle.fill")
+                            .font(.title2).foregroundStyle(guest.entered ? .green : Color.appCyan)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(guest.fullName).font(.headline)
                             Text("\(event.name) • \(guest.packageName)").font(.caption).foregroundStyle(.secondary)
                             if let phone = guest.phone, !phone.isEmpty { Text(phone).font(.caption2).foregroundStyle(.secondary) }
                         }
+                        Spacer()
+                        Menu {
+                            Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") }
+                            Button(role: .destructive) { deletingPair = GuestEventPair(event: event, guest: guest) } label: { Label("Elimina cliente", systemImage: "trash") }
+                        } label: {
+                            Image(systemName: "ellipsis.circle.fill").font(.title2).foregroundStyle(Color.appCyan).padding(6)
+                        }
                     }.padding(.vertical, 4)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button { editingGuest = guest } label: { Label("Modifica", systemImage: "pencil") }.tint(.blue)
+                        Button(role: .destructive) { deletingPair = GuestEventPair(event: event, guest: guest) } label: { Label("Elimina", systemImage: "trash") }
+                    }
                 }
-            }.navigationTitle("Clienti").searchable(text: $search, prompt: "Cerca nome o telefono")
+            }
+            .navigationTitle("Clienti")
+            .searchable(text: $search, prompt: "Cerca nome o telefono")
             .overlay { if filtered.isEmpty { ContentUnavailableView("Nessun cliente", systemImage: "person.3") } }
+            .sheet(item: $editingGuest) { guest in
+                if let event = model.events.first(where: { (model.guestsByEvent[$0.id] ?? []).contains(where: { $0.id == guest.id }) }) {
+                    EditGuestView(eventID: event.id, guest: guest)
+                }
+            }
+            .confirmationDialog("Eliminare questo cliente?", isPresented: Binding(get: { deletingPair != nil }, set: { if !$0 { deletingPair = nil } }), titleVisibility: .visible) {
+                Button("Elimina definitivamente", role: .destructive) {
+                    if let pair = deletingPair { model.deleteGuest(pair.guest, eventID: pair.event.id) }
+                    deletingPair = nil
+                }
+                Button("Annulla", role: .cancel) { deletingPair = nil }
+            }
         }
     }
+}
+
+struct GuestEventPair: Identifiable {
+    let event: PREvent
+    let guest: Guest
+    var id: UUID { guest.id }
 }
 
 struct SettingsView: View {

@@ -146,6 +146,22 @@ final class AppModel: ObservableObject {
         save()
     }
 
+    func checkInFromQRCode(_ encoded: String, expectedEventID: UUID) -> String {
+        guard let data = Data(base64Encoded: encoded),
+              let payload = try? decoder.decode(GuestQRPayload.self, from: data) else { return "QR non valido" }
+        guard payload.eventID == expectedEventID else { return "Il QR appartiene a un altro evento" }
+        guard payload.prCode == profile?.code else { return "Il QR appartiene a un altro PR" }
+        guard var guests = guestsByEvent[payload.eventID],
+              let index = guests.firstIndex(where: { $0.id == payload.guestID }) else { return "Cliente non trovato" }
+        if guests[index].entered { return "\(guests[index].fullName) risulta già entrato" }
+        guests[index].entered = true
+        guests[index].entryTime = .now
+        guestsByEvent[payload.eventID] = guests
+        lastEntry = (payload.eventID, payload.guestID)
+        save()
+        return "Ingresso confermato: \(guests[index].fullName)"
+    }
+
     func toggleEntry(guestID: UUID, eventID: UUID) {
         guard var guests = guestsByEvent[eventID],
               let index = guests.firstIndex(where: { $0.id == guestID }) else { return }

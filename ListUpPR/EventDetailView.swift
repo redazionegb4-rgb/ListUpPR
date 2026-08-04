@@ -18,6 +18,10 @@ struct EventDetailView: View {
     @State private var showQuickAdd = false
     @State private var showCopy = false
     @State private var editingGuest: Guest?
+    @State private var qrGuest: Guest?
+    @State private var showScanner = false
+    @State private var scanMessage = ""
+    @State private var showScanResult = false
     @State private var filter: GuestFilter = .all
 
     var guests: [Guest] { model.guestsByEvent[event.id] ?? [] }
@@ -95,10 +99,14 @@ struct EventDetailView: View {
                         entranceMode: entranceMode,
                         toggle: { model.toggleEntry(guestID: guest.id, eventID: event.id) },
                         edit: { editingGuest = guest },
-                        delete: { model.deleteGuest(guest, eventID: event.id) }
+                        delete: { model.deleteGuest(guest, eventID: event.id) },
+                        showQR: { qrGuest = guest }
                     )
                     .contextMenu {
-                        if !entranceMode { Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") } }
+                        if !entranceMode {
+                            Button { editingGuest = guest } label: { Label("Modifica cliente", systemImage: "pencil") }
+                            Button { qrGuest = guest } label: { Label("Mostra QR ingresso", systemImage: "qrcode") }
+                        }
                         if let phone = guest.phone, !phone.isEmpty {
                             Button { openPhone(phone) } label: { Label("Chiama", systemImage: "phone.fill") }
                             Button { openMessage(phone) } label: { Label("Messaggio", systemImage: "message.fill") }
@@ -133,6 +141,10 @@ struct EventDetailView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
+                if entranceMode {
+                    Button { showScanner = true } label: { Image(systemName: "qrcode.viewfinder") }
+                        .accessibilityLabel("Scansiona QR")
+                }
                 Button {
                     model.refreshFromStorage()
                 } label: {
@@ -154,6 +166,14 @@ struct EventDetailView: View {
         .sheet(isPresented: $showQuickAdd) { QuickAddGuestsView(eventID: event.id) }
         .sheet(isPresented: $showCopy) { CopyGuestsView(destinationEventID: event.id) }
         .sheet(item: $editingGuest) { guest in EditGuestView(eventID: event.id, guest: guest) }
+        .sheet(item: $qrGuest) { guest in GuestQRCodeView(guest: guest, event: event, prCode: model.profile?.code ?? "") }
+        .sheet(isPresented: $showScanner) {
+            QRScannerSheet { code in
+                scanMessage = model.checkInFromQRCode(code, expectedEventID: event.id)
+                showScanResult = true
+            }
+        }
+        .alert("Scanner ingresso", isPresented: $showScanResult) { Button("OK", role: .cancel) {} } message: { Text(scanMessage) }
     }
 
     private func openPhone(_ phone: String) {
@@ -183,6 +203,7 @@ struct GuestRow: View {
     let toggle: () -> Void
     let edit: () -> Void
     let delete: () -> Void
+    let showQR: () -> Void
 
     var body: some View {
         HStack(spacing: 14) {
@@ -214,6 +235,7 @@ struct GuestRow: View {
             if !entranceMode {
                 Menu {
                     Button(action: edit) { Label("Modifica cliente", systemImage: "pencil") }
+                    Button(action: showQR) { Label("Mostra QR ingresso", systemImage: "qrcode") }
                     Button(role: .destructive, action: delete) { Label("Elimina cliente", systemImage: "trash") }
                 } label: {
                     Image(systemName: "ellipsis.circle.fill")

@@ -1,11 +1,11 @@
 import SwiftUI
 
 extension Color {
-    static let appPurple = Color(red: 0.53, green: 0.30, blue: 1.00)
-    static let appPink = Color(red: 1.00, green: 0.20, blue: 0.57)
+    static let appPurple = Color(red: 0.00, green: 0.67, blue: 0.95)
+    static let appPink = Color(red: 0.00, green: 0.88, blue: 0.72)
     static let appCyan = Color(red: 0.00, green: 0.82, blue: 0.96)
-    static let appIndigo = Color(red: 0.08, green: 0.06, blue: 0.18)
-    static let appNavy = Color(red: 0.035, green: 0.035, blue: 0.075)
+    static let appIndigo = Color(red: 0.02, green: 0.10, blue: 0.16)
+    static let appNavy = Color(red: 0.025, green: 0.035, blue: 0.045)
     static let appCard = Color.white.opacity(0.075)
 }
 
