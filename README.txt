@@ -1,18 +1,9 @@
-Guestly PR - Build 14
+LISTUP PR - BUILD STABILE APP STORE
 
-Novità:
-- Accesso PR con username e password.
-- Registrazione PR completamente ridisegnata.
-- Login PR completamente ridisegnato.
-- Risultato scansione QR a schermo intero.
-- Pulsante Visualizza e condividi QR nella pagina Clienti.
-- Condivisione del QR come card immagine professionale.
-- QR personale, univoco e utilizzabile una sola volta.
-- Nome PR, codice PR, evento, pacchetto e prezzo visibili nella card.
+Questa build ripristina esattamente la configurazione Xcode ed entitlements della Build 23 funzionante.
+Sign in with Apple è stato rimosso perché era l'unica modifica di configurazione introdotta prima dell'errore "Preparing build for App Store Connect failed".
 
-Firma, Bundle Identifier, CloudKit, entitlements e compatibilità iPhone/iPad invariati.
+Bundle Identifier: com.dmb.ListUpPR
+CloudKit: iCloud.com.dmb.ListUpPR
 
-Build 18: biglietto digitale ridisegnato, date italiane e nuove pagine evento/cliente.
-
-BUILD 26 - REGISTRAZIONE CON APPLE
-Prima di archiviare, abilita “Sign in with Apple” per l’App ID com.dmb.ListUpPR nel portale Apple Developer e verifica che la capability sia visibile in Signing & Capabilities.
+Per Git: sostituire integralmente il contenuto del repository con questi file, senza mantenere file della Build 26/27.

@@ -33,7 +33,6 @@ struct PRProfile: Codable, Hashable {
     var code: String
     var password: String
     var username: String? = nil
-    var appleUserID: String? = nil
 
     var loginUsername: String { username ?? code }
 }
@@ -105,40 +104,6 @@ final class AppModel: ObservableObject {
     var totalPeople: Int { activeGuests.count }
     var enteredPeople: Int { activeGuests.filter(\.entered).count }
     var activeEvent: PREvent? { upcomingEvents.first(where: { $0.isActive }) ?? upcomingEvents.first }
-
-    func registerPRWithApple(name: String, username: String, appleUserID: String) -> Bool {
-        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let cleanAppleID = appleUserID.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanName.isEmpty, isValidUsername(cleanUsername), !cleanAppleID.isEmpty else { return false }
-
-        commitActiveAccount()
-        guard !accounts.contains(where: { $0.profile.loginUsername.lowercased() == cleanUsername }) else { return false }
-        guard !accounts.contains(where: { $0.profile.appleUserID == cleanAppleID }) else { return false }
-
-        let usedCodes = Set(accounts.map { $0.profile.code })
-        let availableCodes = (100...999).map(String.init).filter { !usedCodes.contains($0) }
-        guard let code = availableCodes.randomElement() else { return false }
-
-        let account = PRAccount(
-            id: UUID(),
-            profile: PRProfile(
-                name: cleanName,
-                code: code,
-                password: "",
-                username: cleanUsername,
-                appleUserID: cleanAppleID
-            ),
-            events: [],
-            guestsByEvent: [:],
-            createdAt: .now
-        )
-        accounts.append(account)
-        activate(account)
-        selectedRole = .pr
-        save()
-        return true
-    }
 
     func registerPR(name: String, username: String, password: String) -> Bool {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -1,81 +1,44 @@
 import SwiftUI
-import AuthenticationServices
 
 struct WelcomeView: View {
     @EnvironmentObject var model: AppModel
     @State private var sheet: AccessSheet?
 
-    enum AccessSheet: Identifiable {
-        case login, appleRegistration, scanner
-        var id: Int { hashValue }
-    }
+    enum AccessSheet: Identifiable { case login, register, scanner; var id: Int { hashValue } }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 28) {
                 Spacer(minLength: 36)
                 BrandMark().padding(.bottom, 4)
-
                 VStack(spacing: 8) {
-                    Text("ListUp PR")
-                        .font(.system(size: 40, weight: .black, design: .rounded))
-                    Text("La tua serata, organizzata bene.")
-                        .font(.title3.weight(.medium))
+                    Text("ListUp PR").font(.system(size: 40, weight: .black, design: .rounded))
+                    Text("La tua serata, organizzata bene.").font(.title3.weight(.medium))
                     Text("Liste, pacchetti e ingressi sincronizzati in un’unica app.")
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                        .foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
 
                 VStack(spacing: 14) {
                     Button { sheet = .login } label: {
                         Label("Accedi come PR", systemImage: "person.crop.circle.badge.checkmark")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
+                    }.buttonStyle(PrimaryButtonStyle())
 
-                    AccessCard(
-                        icon: "apple.logo",
-                        eyebrow: "NON SEI ANCORA ISCRITTO?",
-                        title: "Registrati con Apple",
-                        tint: .primary
-                    ) {
-                        sheet = .appleRegistration
-                    }
-
-                    Text("Accedi con Apple serve solo per creare un nuovo profilo PR. Se sei già registrato, usa “Accedi come PR”.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 8)
-
-                    AccessCard(
-                        icon: "qrcode.viewfinder",
-                        eyebrow: "INGRESSO CLIENTI",
-                        title: "Scansiona QR ingresso",
-                        tint: .green
-                    ) {
-                        sheet = .scanner
-                    }
+                    AccessCard(icon: "sparkles", eyebrow: "PRIMO ACCESSO?", title: "Registrati come PR", tint: .appCyan) { sheet = .register }
+                    AccessCard(icon: "qrcode.viewfinder", eyebrow: "INGRESSO CLIENTI", title: "Scansiona QR ingresso", tint: .green) { sheet = .scanner }
                 }
 
                 HStack(spacing: 8) {
                     Image(systemName: "icloud.fill")
                     Text("Dati salvati sul dispositivo e predisposti per CloudKit")
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
+                }.font(.footnote).foregroundStyle(.secondary)
                 Spacer(minLength: 24)
-            }
-            .padding(.horizontal, 22)
+            }.padding(.horizontal, 22)
         }
         .sheet(item: $sheet) { item in
             switch item {
-            case .login:
-                PRLoginView()
-            case .appleRegistration:
-                ApplePRRegistrationView()
-            case .scanner:
-                GlobalEntranceScannerView()
+            case .login: PRLoginView()
+            case .register: RegisterPRView()
+            case .scanner: GlobalEntranceScannerView()
             }
         }
     }
@@ -89,43 +52,27 @@ struct BrandMark: View {
                 .frame(width: 104, height: 104)
                 .shadow(color: .appCyan.opacity(0.30), radius: 28, y: 12)
             Image(systemName: "person.2.badge.gearshape.fill")
-                .font(.system(size: 45, weight: .bold))
-                .foregroundStyle(.white)
+                .font(.system(size: 45, weight: .bold)).foregroundStyle(.white)
         }
     }
 }
 
 struct AccessCard: View {
-    let icon: String
-    let eyebrow: String
-    let title: String
-    let tint: Color
-    let action: () -> Void
-
+    let icon: String, eyebrow: String, title: String, tint: Color, action: () -> Void
     var body: some View {
         Button(action: action) {
             PremiumCard {
                 HStack(spacing: 15) {
-                    Image(systemName: icon)
-                        .font(.title2)
-                        .foregroundStyle(tint)
-                        .frame(width: 48, height: 48)
-                        .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 15))
+                    Image(systemName: icon).font(.title2).foregroundStyle(tint)
+                        .frame(width: 48, height: 48).background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 15))
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(eyebrow)
-                            .font(.caption2.bold())
-                            .foregroundStyle(.secondary)
-                        Text(title)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+                        Text(eyebrow).font(.caption2.bold()).foregroundStyle(.secondary)
+                        Text(title).font(.headline).foregroundStyle(.primary)
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.secondary)
+                    Spacer(); Image(systemName: "chevron.right").foregroundStyle(.secondary)
                 }
             }
-        }
-        .buttonStyle(.plain)
+        }.buttonStyle(.plain)
     }
 }
 
@@ -142,11 +89,7 @@ struct PRLoginView: View {
                 AppBackground()
                 ScrollView {
                     VStack(spacing: 22) {
-                        accessHero(
-                            icon: "person.crop.circle.badge.checkmark",
-                            title: "Bentornato",
-                            subtitle: "Accedi al tuo profilo PR con username e password"
-                        )
+                        accessHero(icon: "person.crop.circle.badge.checkmark", title: "Bentornato", subtitle: "Accedi al tuo profilo PR con username e password")
 
                         PremiumCard {
                             VStack(spacing: 16) {
@@ -157,8 +100,7 @@ struct PRLoginView: View {
 
                         if error {
                             Label("Username o password non corretti.", systemImage: "exclamationmark.triangle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.red)
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.red)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
@@ -171,44 +113,31 @@ struct PRLoginView: View {
                         .buttonStyle(PrimaryButtonStyle())
                         .disabled(username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || password.isEmpty)
 
-                        Text("Se non hai ancora un profilo, chiudi questa pagina e scegli “Registrati con Apple”.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
+                        Text("L’username identifica in modo univoco il tuo profilo, anche quando altri PR scelgono la stessa password.")
+                            .font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }
                     .padding(22)
                 }
             }
             .navigationTitle("Accesso PR")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Chiudi") { dismiss() }
-                }
-            }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
 }
 
-struct ApplePRRegistrationView: View {
+struct RegisterPRView: View {
     @EnvironmentObject var model: AppModel
     @Environment(\.dismiss) var dismiss
-
-    @State private var appleUserID = ""
-    @State private var suggestedName = ""
     @State private var name = ""
     @State private var username = ""
-    @State private var authError = ""
-    @State private var registrationError = false
+    @State private var password = ""
+    @State private var confirm = ""
+    @State private var showError = false
 
-    private var normalizedUsername: String {
-        username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
+    private var normalizedUsername: String { username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
     private var usernameFormatValid: Bool {
-        normalizedUsername.count >= 4 &&
-        normalizedUsername.count <= 24 &&
-        normalizedUsername.allSatisfy { $0.isLetter || $0.isNumber || $0 == "." || $0 == "_" }
+        normalizedUsername.count >= 4 && normalizedUsername.count <= 24 && normalizedUsername.allSatisfy { $0.isLetter || $0.isNumber || $0 == "." || $0 == "_" }
     }
 
     var body: some View {
@@ -217,132 +146,51 @@ struct ApplePRRegistrationView: View {
                 AppBackground()
                 ScrollView {
                     VStack(spacing: 22) {
-                        accessHero(
-                            icon: "apple.logo",
-                            title: "Nuovo profilo PR",
-                            subtitle: "Usa Apple solo per registrarti in modo sicuro, senza password da ricordare"
-                        )
+                        accessHero(icon: "person.badge.plus", title: "Crea il tuo profilo", subtitle: "Organizza eventi e liste in uno spazio personale e separato")
 
-                        if appleUserID.isEmpty {
-                            PremiumCard {
-                                VStack(spacing: 16) {
-                                    Label("Solo per nuovi PR", systemImage: "person.badge.plus")
-                                        .font(.headline)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    Text("Se hai già un account ListUp PR, torna indietro e scegli “Accedi come PR”.")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                                    SignInWithAppleButton(.signUp) { request in
-                                        request.requestedScopes = [.fullName, .email]
-                                    } onCompletion: { result in
-                                        handleAppleResult(result)
-                                    }
-                                    .signInWithAppleButtonStyle(.white)
-                                    .frame(height: 54)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                }
+                        PremiumCard {
+                            VStack(spacing: 16) {
+                                ModernAccessField(icon: "person.fill", title: "Nome PR", placeholder: "Es. Demetrio o Team White", text: $name)
+                                ModernAccessField(icon: "at", title: "Username", placeholder: "Es. demetrio.pr", text: $username)
+                                ModernSecureField(icon: "lock.fill", title: "Password", placeholder: "Minimo 4 caratteri", text: $password)
+                                ModernSecureField(icon: "checkmark.shield.fill", title: "Conferma password", placeholder: "Ripeti la password", text: $confirm)
                             }
-                        } else {
-                            PremiumCard {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    Label("Identità Apple verificata", systemImage: "checkmark.seal.fill")
-                                        .font(.headline)
-                                        .foregroundStyle(.green)
-
-                                    ModernAccessField(
-                                        icon: "person.fill",
-                                        title: "Nome PR",
-                                        placeholder: "Es. Demetrio o Team White",
-                                        text: $name
-                                    )
-                                    ModernAccessField(
-                                        icon: "at",
-                                        title: "Username",
-                                        placeholder: "Es. demetrio.pr",
-                                        text: $username
-                                    )
-                                }
-                            }
-
-                            VStack(alignment: .leading, spacing: 8) {
-                                Label("Username da 4 a 24 caratteri", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
-                                Label("Usa lettere, numeri, punto o trattino basso", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
-                                Label("Non dovrai creare o ricordare una password", systemImage: "checkmark.circle.fill")
-                            }
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                            if registrationError {
-                                Label("Username già utilizzato oppure profilo Apple già registrato.", systemImage: "exclamationmark.triangle.fill")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(.red)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-
-                            Button {
-                                guard model.registerPRWithApple(
-                                    name: name,
-                                    username: normalizedUsername,
-                                    appleUserID: appleUserID
-                                ) else {
-                                    registrationError = true
-                                    return
-                                }
-                                dismiss()
-                            } label: {
-                                Label("Crea profilo PR", systemImage: "checkmark.circle.fill")
-                            }
-                            .buttonStyle(PrimaryButtonStyle())
-                            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !usernameFormatValid)
                         }
 
-                        if !authError.isEmpty {
-                            Label(authError, systemImage: "exclamationmark.triangle.fill")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.red)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Username da 4 a 24 caratteri", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
+                            Label("Usa lettere, numeri, punto o trattino basso", systemImage: usernameFormatValid ? "checkmark.circle.fill" : "circle")
+                            Label("Password uguali tra PR diversi sono consentite", systemImage: "checkmark.circle.fill")
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if showError {
+                            Label("Username già utilizzato oppure dati non validi.", systemImage: "exclamationmark.triangle.fill")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.red)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
+
+                        Button {
+                            guard password == confirm,
+                                  model.registerPR(name: name, username: normalizedUsername, password: password) else {
+                                showError = true
+                                return
+                            }
+                            dismiss()
+                        } label: {
+                            Label("Crea profilo PR", systemImage: "checkmark.circle.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !usernameFormatValid || password.count < 4 || password != confirm)
                     }
                     .padding(22)
                 }
             }
-            .navigationTitle("Registrazione con Apple")
+            .navigationTitle("Registrazione PR")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Chiudi") { dismiss() }
-                }
-            }
-        }
-    }
-
-    private func handleAppleResult(_ result: Result<ASAuthorization, Error>) {
-        authError = ""
-        registrationError = false
-
-        switch result {
-        case .success(let authorization):
-            guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential else {
-                authError = "Impossibile verificare l’identità Apple."
-                return
-            }
-            appleUserID = credential.user
-
-            if let components = credential.fullName {
-                let formatter = PersonNameComponentsFormatter()
-                suggestedName = formatter.string(from: components)
-                if name.isEmpty { name = suggestedName }
-            }
-
-        case .failure(let error):
-            let nsError = error as NSError
-            if nsError.code != ASAuthorizationError.canceled.rawValue {
-                authError = "Registrazione con Apple non riuscita. Riprova."
-            }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
 }
@@ -351,57 +199,41 @@ struct ApplePRRegistrationView: View {
 private func accessHero(icon: String, title: String, subtitle: String) -> some View {
     VStack(spacing: 14) {
         ZStack {
-            Circle()
-                .fill(Color.appCyan.opacity(0.15))
-                .frame(width: 86, height: 86)
-            Image(systemName: icon)
-                .font(.system(size: 38, weight: .bold))
-                .foregroundStyle(Color.appCyan)
+            Circle().fill(Color.appCyan.opacity(0.15)).frame(width: 86, height: 86)
+            Image(systemName: icon).font(.system(size: 38, weight: .bold)).foregroundStyle(Color.appCyan)
         }
-        Text(title)
-            .font(.system(size: 31, weight: .black, design: .rounded))
-        Text(subtitle)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
+        Text(title).font(.system(size: 31, weight: .black, design: .rounded))
+        Text(subtitle).foregroundStyle(.secondary).multilineTextAlignment(.center)
     }
 }
 
 struct ModernAccessField: View {
-    let icon: String
-    let title: String
-    let placeholder: String
+    let icon: String, title: String, placeholder: String
     @Binding var text: String
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Label(title, systemImage: icon)
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            TextField(placeholder, text: $text)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(14)
-                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        HStack(spacing: 13) {
+            Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                TextField(placeholder, text: $text).textInputAutocapitalization(.never).autocorrectionDisabled()
+            }
         }
+        .padding(14).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
 struct ModernSecureField: View {
-    let icon: String
-    let title: String
-    let placeholder: String
+    let icon: String, title: String, placeholder: String
     @Binding var text: String
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Label(title, systemImage: icon)
-                .font(.caption.bold())
-                .foregroundStyle(.secondary)
-            SecureField(placeholder, text: $text)
-                .textInputAutocapitalization(.never)
-                .padding(14)
-                .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        HStack(spacing: 13) {
+            Image(systemName: icon).foregroundStyle(Color.appCyan).frame(width: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                SecureField(placeholder, text: $text).textInputAutocapitalization(.never)
+            }
         }
+        .padding(14).background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
@@ -520,4 +352,3 @@ struct QRScanResultView: View {
         }
     }
 }
-
