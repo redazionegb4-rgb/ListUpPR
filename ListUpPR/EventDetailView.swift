@@ -345,6 +345,7 @@ struct AddGuestView: View {
                 .disabled(first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .navigationTitle("Nuovo cliente")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
@@ -390,6 +391,7 @@ struct EditGuestView: View {
                 }
                 Button("Salva modifiche") { model.updateGuest(guest, eventID: eventID); dismiss() }
             }.navigationTitle("Modifica cliente")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
@@ -516,6 +518,7 @@ struct CopyGuestsView: View {
                     }
                 }
             }.navigationTitle("Copia clienti")
+            .navigationBarTitleDisplayMode(.inline)
             .overlay { if model.events.filter({ $0.id != destinationEventID }).isEmpty { ContentUnavailableView("Nessun altro evento", systemImage: "calendar") } }
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }

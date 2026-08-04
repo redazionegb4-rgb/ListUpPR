@@ -27,6 +27,7 @@ struct EntranceDashboardView: View {
             NavigationSplitView {
                 entranceEventList
                     .navigationTitle("Ingresso")
+                    .navigationBarTitleDisplayMode(.inline)
                     .toolbar { toolbarContent }
             } detail: {
                 if let event = selectedEvent {
@@ -42,6 +43,7 @@ struct EntranceDashboardView: View {
             NavigationStack {
                 entranceEventList
                     .navigationTitle("Ingresso")
+                    .navigationBarTitleDisplayMode(.inline)
                     .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: true) }
                     .toolbar { toolbarContent }
             }

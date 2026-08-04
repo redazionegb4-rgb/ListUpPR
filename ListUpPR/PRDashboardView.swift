@@ -44,24 +44,25 @@ struct PRDashboardView: View {
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
             .sheet(item: $targetEvent) { event in AddGuestView(eventID: event.id) }
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { model.refreshFromStorage() } label: {
-                        Image(systemName: "arrow.clockwise.circle.fill").font(.title3)
-                    }.accessibilityLabel("Aggiorna dati")
-                    Button { model.logout() } label: {
-                        Image(systemName: "rectangle.portrait.and.arrow.right").font(.title3)
-                    }.accessibilityLabel("Esci")
-                }
-            }
         }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Bentornato").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-            Text(model.profile?.name ?? "PR").font(.system(size: 32, weight: .black, design: .rounded))
-        }.frame(maxWidth: .infinity, alignment: .leading)
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Bentornato").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text(model.profile?.name ?? "PR").font(.system(size: 30, weight: .black, design: .rounded))
+            }
+            Spacer()
+            Button { model.refreshFromStorage() } label: {
+                Image(systemName: "arrow.clockwise").font(.headline).frame(width: 44, height: 44)
+                    .background(.thinMaterial, in: Circle())
+            }.buttonStyle(.plain).accessibilityLabel("Aggiorna dati")
+            Button { model.logout() } label: {
+                Image(systemName: "rectangle.portrait.and.arrow.right").font(.headline).frame(width: 44, height: 44)
+                    .background(.thinMaterial, in: Circle()).foregroundStyle(.red)
+            }.buttonStyle(.plain).accessibilityLabel("Esci")
+        }.frame(maxWidth: .infinity)
     }
 
     private var hero: some View {
@@ -195,6 +196,7 @@ struct EventsView: View {
                 }
             }
             .navigationTitle("Eventi")
+            .navigationBarTitleDisplayMode(.inline)
             .overlay { if model.events.isEmpty { ContentUnavailableView("Nessun evento", systemImage: "calendar", description: Text("Crea il primo evento.")) } }
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showNewEvent = true } label: { Image(systemName: "plus.circle.fill") } } }
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
@@ -230,6 +232,8 @@ struct AllGuestsView: View {
     @State private var deletingPair: GuestEventPair?
     @State private var qrPair: GuestEventPair?
     @State private var showPast = false
+    @State private var targetEvent: PREvent?
+    @State private var showNewEvent = false
 
     private var sourceEvents: [PREvent] { showPast ? model.pastEvents : model.upcomingEvents }
     private var filtered: [GuestEventPair] {
@@ -243,22 +247,52 @@ struct AllGuestsView: View {
             ZStack {
                 AppBackground()
                 ScrollView {
-                    LazyVStack(spacing: 14) {
+                    LazyVStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Clienti").font(.system(size: 30, weight: .black, design: .rounded))
+                                Text(showPast ? "Archivio degli eventi conclusi" : "Gestisci liste e ingressi").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button {
+                                if let event = model.activeEvent { targetEvent = event } else { showNewEvent = true }
+                            } label: {
+                                Image(systemName: "plus").font(.headline).frame(width: 44, height: 44)
+                                    .background(Color.appCyan, in: Circle()).foregroundStyle(.white)
+                            }.buttonStyle(.plain)
+                        }
+
+                        HStack(spacing: 10) {
+                            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                            TextField("Cerca nome, telefono o pacchetto", text: $search)
+                                .textInputAutocapitalization(.never)
+                            if !search.isEmpty { Button { search = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) } }
+                        }
+                        .padding(.horizontal, 15).frame(height: 50)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
+
                         Picker("Archivio", selection: $showPast) {
                             Text("Eventi attivi").tag(false); Text("Eventi passati").tag(true)
                         }.pickerStyle(.segmented)
 
                         if filtered.isEmpty {
-                            ContentUnavailableView(showPast ? "Nessun cliente nello storico" : "Nessun cliente", systemImage: "person.3", description: Text(search.isEmpty ? "I clienti appariranno qui." : "Prova una ricerca diversa."))
-                                .padding(.top, 60)
+                            PremiumCard {
+                                VStack(spacing: 12) {
+                                    Image(systemName: search.isEmpty ? "person.3" : "magnifyingglass").font(.system(size: 32)).foregroundStyle(Color.appCyan)
+                                    Text(search.isEmpty ? (showPast ? "Nessun cliente nello storico" : "Nessun cliente") : "Nessun risultato").font(.headline)
+                                    Text(search.isEmpty ? "Aggiungi il primo cliente usando il pulsante +." : "Prova con un altro nome, telefono o pacchetto.")
+                                        .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                                }.frame(maxWidth: .infinity).padding(.vertical, 14)
+                            }
                         } else {
                             ForEach(filtered) { pair in clientCard(pair) }
                         }
-                    }.padding(20)
+                    }.padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 30)
                 }
             }
-            .navigationTitle("Clienti")
-            .searchable(text: $search, prompt: "Cerca nome, telefono o pacchetto")
+            .toolbar(.hidden, for: .navigationBar)
+            .sheet(item: $targetEvent) { event in AddGuestView(eventID: event.id) }
+            .sheet(isPresented: $showNewEvent) { NewEventView() }
             .sheet(item: $editingPair) { pair in EditGuestView(eventID: pair.event.id, guest: pair.guest) }
             .sheet(item: $qrPair) { pair in GuestQRCodeView(guest: pair.guest, event: pair.event, prCode: model.profile?.code ?? "", prName: model.profile?.name ?? "PR") }
             .alert("Eliminare il cliente?", isPresented: Binding(get: { deletingPair != nil }, set: { if !$0 { deletingPair = nil } })) {
@@ -270,31 +304,32 @@ struct AllGuestsView: View {
 
     private func clientCard(_ pair: GuestEventPair) -> some View {
         PremiumCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 13) {
+                HStack(alignment: .center, spacing: 12) {
                     ZStack {
-                        Circle().fill((pair.guest.entered ? Color.green : Color.appCyan).opacity(0.15)).frame(width: 48, height: 48)
-                        Image(systemName: pair.guest.entered ? "checkmark.circle.fill" : "person.fill").foregroundStyle(pair.guest.entered ? .green : Color.appCyan)
+                        Circle().fill((pair.guest.entered ? Color.green : Color.appCyan).opacity(0.16)).frame(width: 48, height: 48)
+                        Image(systemName: pair.guest.entered ? "checkmark" : "person.fill").font(.headline).foregroundStyle(pair.guest.entered ? .green : Color.appCyan)
                     }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(pair.guest.fullName).font(.title3.bold())
-                        Text("\(pair.event.name) • \(pair.guest.packageName)").font(.subheadline).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(pair.guest.fullName).font(.headline)
+                        Text(pair.event.name).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     Text(pair.guest.entered ? "ENTRATO" : "DA ENTRARE").font(.caption2.bold()).padding(.horizontal, 9).padding(.vertical, 6)
                         .background((pair.guest.entered ? Color.green : Color.orange).opacity(0.14), in: Capsule())
                         .foregroundStyle(pair.guest.entered ? .green : .orange)
                 }
-                HStack {
-                    Label(pair.guest.price <= 0 ? "Omaggio" : pair.guest.price.formatted(.currency(code: "EUR")), systemImage: "eurosign.circle")
+                HStack(spacing: 12) {
+                    Label(pair.guest.packageName, systemImage: "ticket.fill")
                     Spacer()
-                    if let phone = pair.guest.phone, !phone.isEmpty { Label(phone, systemImage: "phone.fill") }
-                }.font(.caption).foregroundStyle(.secondary)
+                    Text(pair.guest.price <= 0 ? "Omaggio" : pair.guest.price.formatted(.currency(code: "EUR"))).bold()
+                }.font(.subheadline)
                 HStack(spacing: 10) {
                     Button { qrPair = pair } label: { Label("QR", systemImage: "qrcode") }.buttonStyle(.borderedProminent).tint(.appCyan)
                     Button { editingPair = pair } label: { Label("Modifica", systemImage: "pencil") }.buttonStyle(.bordered)
-                    Button(role: .destructive) { deletingPair = pair } label: { Image(systemName: "trash") }.buttonStyle(.bordered)
-                }
+                    Spacer()
+                    Button(role: .destructive) { deletingPair = pair } label: { Label("Elimina", systemImage: "trash") }.buttonStyle(.bordered)
+                }.font(.caption.bold())
             }
         }
     }
@@ -329,7 +364,7 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Impostazioni")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showPassword) { ChangePasswordView() }
             .sheet(isPresented: $showName) { ChangePRNameView() }
             .alert("Cancellare tutti i dati?", isPresented: $showReset) {
@@ -466,6 +501,7 @@ struct ChangePasswordView: View {
                     dismiss()
                 }.disabled(password.count < 4 || password != confirmation)
             }.navigationTitle("Cambia password")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
@@ -482,6 +518,7 @@ struct ChangePRNameView: View {
                 Button("Salva nome") { model.updateProfile(name: name); dismiss() }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }.navigationTitle("Modifica nome")
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear { name = model.profile?.name ?? "" }
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
@@ -499,6 +536,7 @@ struct NewEventView: View {
                 Button("Crea evento") { model.addEvent(PREvent(name: name, venue: venue, date: date)); dismiss() }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || venue.trimmingCharacters(in: .whitespaces).isEmpty)
             }.navigationTitle("Nuovo evento")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }

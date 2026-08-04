@@ -251,13 +251,13 @@ final class AppModel: ObservableObject {
         let key = payload.eventID.uuidString
         guard var guests = account.guestsByEvent[key],
               let index = guests.firstIndex(where: { $0.id == payload.guestID }) else {
-            return QRCheckInResult(isValid: false, title: "Cliente non trovato", guestName: "", eventName: event.name, eventDate: event.date.formatted(date: .long, time: .shortened), prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Il cliente non è presente nella lista")
+            return QRCheckInResult(isValid: false, title: "Cliente non trovato", guestName: "", eventName: event.name, eventDate: italianEventDateTime(event.date), prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Il cliente non è presente nella lista")
         }
         guard payload.token == guests[index].effectiveQRToken else {
-            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: guests[index].fullName, eventName: event.name, eventDate: event.date.formatted(date: .long, time: .shortened), prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "QR non valido per questo cliente")
+            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: guests[index].fullName, eventName: event.name, eventDate: italianEventDateTime(event.date), prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "QR non valido per questo cliente")
         }
         if guests[index].entered {
-            return QRCheckInResult(isValid: false, title: "Ingresso già registrato", guestName: guests[index].fullName, eventName: event.name, eventDate: event.date.formatted(date: .long, time: .shortened), prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Questo QR è già stato utilizzato")
+            return QRCheckInResult(isValid: false, title: "Ingresso già registrato", guestName: guests[index].fullName, eventName: event.name, eventDate: italianEventDateTime(event.date), prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Questo QR è già stato utilizzato")
         }
 
         guests[index].entered = true
@@ -285,7 +285,7 @@ final class AppModel: ObservableObject {
             paymentTitle = "SALDO IN CASSA"
             paymentDetail = "Il cliente deve completare il pagamento alla cassa."
         }
-        return QRCheckInResult(isValid: true, title: "ACCESSO VALIDO", guestName: guests[index].fullName, eventName: event.name, eventDate: event.date.formatted(date: .long, time: .shortened), prName: account.profile.name, prCode: account.profile.code, paymentTitle: paymentTitle, paymentDetail: paymentDetail, amountDue: amountDue, detail: "QR riconosciuto e ingresso registrato correttamente")
+        return QRCheckInResult(isValid: true, title: "ACCESSO VALIDO", guestName: guests[index].fullName, eventName: event.name, eventDate: italianEventDateTime(event.date), prName: account.profile.name, prCode: account.profile.code, paymentTitle: paymentTitle, paymentDetail: paymentDetail, amountDue: amountDue, detail: "QR riconosciuto e ingresso registrato correttamente")
     }
 
     func toggleEntry(guestID: UUID, eventID: UUID) {

@@ -32,8 +32,7 @@ struct GuestQRCodeView: View {
                 ScrollView {
                     VStack(spacing: 18) {
                         QRPassCard(guest: guest, event: event, prCode: prCode, prName: prName, payload: payload, compact: true)
-                            .frame(maxWidth: 420)
-                            .aspectRatio(0.68, contentMode: .fit)
+                            .frame(width: min(UIScreen.main.bounds.width - 30, 410), height: min((UIScreen.main.bounds.width - 30) * 1.56, 640))
 
                         Text("Questa è l’anteprima completa della card da inviare al cliente.")
                             .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
@@ -56,7 +55,7 @@ struct GuestQRCodeView: View {
     @MainActor
     private func shareCard() {
         let card = QRPassCard(guest: guest, event: event, prCode: prCode, prName: prName, payload: payload, compact: false)
-            .frame(width: 1080, height: 1600)
+            .frame(width: 900, height: 1450)
         let renderer = ImageRenderer(content: card)
         renderer.scale = 1
         renderer.isOpaque = true
@@ -72,66 +71,151 @@ struct QRPassCard: View {
     let payload: String
     let compact: Bool
 
+    private var ticketColor: Color { Color(red: 0.02, green: 0.36, blue: 0.48) }
+
     var body: some View {
-        GeometryReader { geo in
-            let scale = min(geo.size.width / 1080, geo.size.height / 1600)
-            ZStack {
-                LinearGradient(colors: [Color(red: 0.015, green: 0.06, blue: 0.11), Color(red: 0.00, green: 0.24, blue: 0.28)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                Circle().fill(Color.appCyan.opacity(0.22)).frame(width: 520, height: 520).blur(radius: 55).offset(x: 330, y: -520)
-                Circle().fill(Color.blue.opacity(0.16)).frame(width: 450, height: 450).blur(radius: 60).offset(x: -360, y: 540)
+        ZStack {
+            Color(red: 0.94, green: 0.96, blue: 0.98)
 
-                VStack(spacing: 34) {
-                    VStack(spacing: 10) {
-                        HStack(spacing: 13) {
-                            Image(systemName: "qrcode.viewfinder").font(.system(size: 40, weight: .bold))
-                            Text("LISTUP PR").font(.system(size: 38, weight: .black, design: .rounded))
-                        }
-                        Text("PASS INGRESSO").font(.system(size: 18, weight: .bold)).tracking(5).foregroundStyle(.white.opacity(0.68))
-                    }
+            VStack(spacing: 0) {
+                ticketHeader
+                ticketBody
+            }
+            .background(ticketColor)
+            .clipShape(RoundedRectangle(cornerRadius: compact ? 28 : 48, style: .continuous))
+            .overlay(ticketCutouts)
+            .shadow(color: .black.opacity(0.18), radius: compact ? 12 : 28, y: compact ? 7 : 16)
+            .padding(compact ? 4 : 28)
+        }
+    }
 
-                    VStack(spacing: 10) {
-                        Text(guest.fullName).font(.system(size: 48, weight: .black, design: .rounded)).multilineTextAlignment(.center).lineLimit(2)
-                        Text(event.name).font(.system(size: 30, weight: .bold)).multilineTextAlignment(.center)
-                        Text(event.venue).font(.system(size: 22, weight: .medium)).foregroundStyle(.white.opacity(0.76))
-                        Text(event.date.formatted(date: .long, time: .shortened)).font(.system(size: 21, weight: .semibold)).foregroundStyle(.white.opacity(0.76))
-                    }
-
-                    QRCodeImage(text: payload)
-                        .frame(width: 470, height: 470)
-                        .padding(26)
-                        .background(.white, in: RoundedRectangle(cornerRadius: 40, style: .continuous))
-
-                    HStack(spacing: 18) {
-                        passInfo(title: "PACCHETTO", value: guest.packageName)
-                        Rectangle().fill(.white.opacity(0.23)).frame(width: 1, height: 82)
-                        passInfo(title: "PREZZO", value: guest.price <= 0 ? "OMAGGIO" : guest.price.formatted(.currency(code: "EUR")))
-                    }
-
-                    HStack(alignment: .top) {
-                        passInfo(title: "PR", value: prName, alignment: .leading)
-                        Spacer()
-                        passInfo(title: "CODICE PR", value: prCode, alignment: .trailing)
-                    }
-
-                    Text("Mostra questa card all’ingresso. Il QR è personale e utilizzabile una sola volta.")
-                        .font(.system(size: 18, weight: .medium)).foregroundStyle(.white.opacity(0.75)).multilineTextAlignment(.center)
+    private var ticketHeader: some View {
+        HStack(alignment: .top, spacing: compact ? 12 : 24) {
+            VStack(alignment: .leading, spacing: compact ? 3 : 7) {
+                HStack(spacing: compact ? 7 : 14) {
+                    Image(systemName: "qrcode.viewfinder")
+                        .font(.system(size: compact ? 17 : 34, weight: .black))
+                    Text("LISTUP PR")
+                        .font(.system(size: compact ? 18 : 36, weight: .black, design: .rounded))
                 }
-                .foregroundStyle(.white)
-                .padding(64)
-                .frame(width: 1080, height: 1600)
-                .scaleEffect(scale)
+                Text("BIGLIETTO D’INGRESSO")
+                    .font(.system(size: compact ? 8 : 16, weight: .bold))
+                    .tracking(compact ? 1.5 : 4)
+                    .opacity(0.78)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: compact ? 3 : 7) {
+                Text("DATA")
+                    .font(.system(size: compact ? 8 : 16, weight: .bold))
+                    .opacity(0.72)
+                Text(italianTicketDate(event.date))
+                    .font(.system(size: compact ? 15 : 30, weight: .bold, design: .rounded))
             }
         }
-        .background(Color.black)
-        .clipShape(RoundedRectangle(cornerRadius: compact ? 34 : 0, style: .continuous))
+        .foregroundStyle(.white)
+        .padding(.horizontal, compact ? 20 : 46)
+        .padding(.top, compact ? 19 : 42)
+        .padding(.bottom, compact ? 15 : 30)
     }
 
-    private func passInfo(title: String, value: String, alignment: TextAlignment = .center) -> some View {
-        VStack(alignment: alignment == .leading ? .leading : alignment == .trailing ? .trailing : .center, spacing: 8) {
-            Text(title).font(.system(size: 16, weight: .bold)).foregroundStyle(.white.opacity(0.58))
-            Text(value).font(.system(size: 23, weight: .bold)).multilineTextAlignment(alignment).lineLimit(2).minimumScaleFactor(0.75)
-        }.frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : alignment == .trailing ? .trailing : .center)
+    private var ticketBody: some View {
+        VStack(spacing: compact ? 15 : 30) {
+            HStack(alignment: .top, spacing: compact ? 15 : 32) {
+                ticketField(title: "CLIENTE", value: guest.fullName, alignment: .leading)
+                ticketField(title: "ORARIO", value: italianTicketTime(event.date), alignment: .trailing)
+            }
+
+            HStack(alignment: .top, spacing: compact ? 15 : 32) {
+                ticketField(title: "EVENTO", value: event.name, alignment: .leading)
+                ticketField(title: "LOCALE", value: event.venue, alignment: .trailing)
+            }
+
+            HStack(alignment: .top, spacing: compact ? 15 : 32) {
+                ticketField(title: "PACCHETTO", value: guest.packageName, alignment: .leading)
+                ticketField(title: "PREZZO", value: guest.price <= 0 ? "OMAGGIO" : guest.price.formatted(.currency(code: "EUR")), alignment: .trailing)
+            }
+
+            perforation
+
+            QRCodeImage(text: payload)
+                .frame(width: compact ? 215 : 430, height: compact ? 215 : 430)
+                .padding(compact ? 13 : 25)
+                .background(.white, in: RoundedRectangle(cornerRadius: compact ? 20 : 34, style: .continuous))
+
+            HStack(alignment: .top, spacing: compact ? 15 : 32) {
+                ticketField(title: "PR", value: prName, alignment: .leading)
+                ticketField(title: "CODICE PR", value: prCode, alignment: .trailing)
+            }
+
+            Text("Mostra questo biglietto all’ingresso. Il QR è personale e utilizzabile una sola volta.")
+                .font(.system(size: compact ? 9 : 17, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.80))
+                .multilineTextAlignment(.center)
+                .padding(.top, compact ? 2 : 4)
+        }
+        .padding(.horizontal, compact ? 20 : 46)
+        .padding(.bottom, compact ? 22 : 46)
+        .foregroundStyle(.white)
     }
+
+    private var perforation: some View {
+        HStack(spacing: compact ? 5 : 10) {
+            ForEach(0..<(compact ? 26 : 40), id: \.self) { _ in
+                Capsule().fill(.white.opacity(0.52)).frame(width: compact ? 6 : 12, height: compact ? 2 : 4)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .clipped()
+    }
+
+    private var ticketCutouts: some View {
+        VStack {
+            Spacer().frame(height: compact ? 214 : 418)
+            HStack {
+                Circle().fill(Color(red: 0.94, green: 0.96, blue: 0.98)).frame(width: compact ? 24 : 48).offset(x: compact ? -12 : -24)
+                Spacer()
+                Circle().fill(Color(red: 0.94, green: 0.96, blue: 0.98)).frame(width: compact ? 24 : 48).offset(x: compact ? 12 : 24)
+            }
+            Spacer()
+        }
+    }
+
+    private func ticketField(title: String, value: String, alignment: TextAlignment) -> some View {
+        VStack(alignment: alignment == .leading ? .leading : .trailing, spacing: compact ? 3 : 7) {
+            Text(title)
+                .font(.system(size: compact ? 8 : 15, weight: .bold))
+                .foregroundStyle(.white.opacity(0.70))
+            Text(value)
+                .font(.system(size: compact ? 13 : 25, weight: .bold, design: .rounded))
+                .multilineTextAlignment(alignment)
+                .lineLimit(2)
+                .minimumScaleFactor(0.68)
+        }
+        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
+    }
+}
+
+func italianEventDateTime(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "it_IT")
+    formatter.dateFormat = "d MMMM yyyy 'alle' HH:mm"
+    return formatter.string(from: date)
+}
+
+func italianTicketDate(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "it_IT")
+    formatter.dateFormat = "dd/MM/yy"
+    return formatter.string(from: date)
+}
+
+func italianTicketTime(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "it_IT")
+    formatter.dateFormat = "HH:mm"
+    return formatter.string(from: date)
 }
 
 struct ImageShareItem: Identifiable { let id = UUID(); let image: UIImage }
