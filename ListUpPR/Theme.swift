@@ -111,3 +111,32 @@ struct GradientIcon: View {
             .shadow(color: .appPurple.opacity(0.22), radius: 10, y: 5)
     }
 }
+
+
+struct FixedModalHeader: View {
+    let title: String
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack {
+            Button(action: onClose) {
+                Label("Chiudi", systemImage: "xmark")
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 13)
+                    .frame(height: 38)
+                    .background(.thinMaterial, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            Spacer()
+            if !title.isEmpty {
+                Text(title).font(.headline)
+                Spacer()
+                Color.clear.frame(width: 92, height: 38)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .bottom) { Divider().opacity(0.5) }
+    }
+}

@@ -358,8 +358,10 @@ struct AddGuestView: View {
                     .padding(20)
                 }
             }
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
-            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                FixedModalHeader(title: "", onClose: { dismiss() })
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }
@@ -478,8 +480,10 @@ struct EditGuestView: View {
                 }
             }
             .onAppear { priceText = String(format: "%.2f", guest.price).replacingOccurrences(of: ".", with: ",") }
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
-            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                FixedModalHeader(title: "", onClose: { dismiss() })
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }

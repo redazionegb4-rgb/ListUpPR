@@ -16,6 +16,8 @@ struct PRDashboardView: View {
     @EnvironmentObject var model: AppModel
     @State private var showNewEvent = false
     @State private var targetEvent: PREvent?
+    @State private var isRefreshing = false
+    @State private var showRefreshConfirmation = false
 
     private var waiting: Int { max(0, model.totalPeople - model.enteredPeople) }
     private var progress: Double { model.totalPeople == 0 ? 0 : Double(model.enteredPeople) / Double(model.totalPeople) }
@@ -44,6 +46,32 @@ struct PRDashboardView: View {
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
             .sheet(item: $targetEvent) { event in AddGuestView(eventID: event.id) }
+            .overlay(alignment: .top) {
+                if showRefreshConfirmation {
+                    Label("Dati aggiornati", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(Color.green, in: Capsule())
+                        .shadow(radius: 10, y: 5)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .zIndex(10)
+                }
+            }
+        }
+    }
+
+    private func performRefresh() {
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            model.refreshFromStorage()
+            withAnimation { isRefreshing = false; showRefreshConfirmation = true }
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            withAnimation { showRefreshConfirmation = false }
         }
     }
 
@@ -54,10 +82,17 @@ struct PRDashboardView: View {
                 Text(model.profile?.name ?? "PR").font(.system(size: 30, weight: .black, design: .rounded))
             }
             Spacer()
-            Button { model.refreshFromStorage() } label: {
-                Image(systemName: "arrow.clockwise").font(.headline).frame(width: 44, height: 44)
+            Button { performRefresh() } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.headline)
+                    .rotationEffect(.degrees(isRefreshing ? 360 : 0))
+                    .animation(.easeInOut(duration: 0.65), value: isRefreshing)
+                    .frame(width: 44, height: 44)
                     .background(.thinMaterial, in: Circle())
-            }.buttonStyle(.plain).accessibilityLabel("Aggiorna dati")
+            }
+            .buttonStyle(.plain)
+            .disabled(isRefreshing)
+            .accessibilityLabel("Aggiorna dati")
             Button { model.logout() } label: {
                 Image(systemName: "rectangle.portrait.and.arrow.right").font(.headline).frame(width: 44, height: 44)
                     .background(.thinMaterial, in: Circle()).foregroundStyle(.red)
@@ -323,6 +358,8 @@ struct AllGuestsView: View {
     @State private var qrPair: GuestEventPair?
     @State private var showPast = false
     @State private var targetEvent: PREvent?
+    @State private var isRefreshing = false
+    @State private var showRefreshConfirmation = false
     @State private var showNewEvent = false
 
     private var sourceEvents: [PREvent] { showPast ? model.pastEvents : model.upcomingEvents }
@@ -662,8 +699,10 @@ struct NewEventView: View {
                     .padding(20)
                 }
             }
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
-            .navigationBarTitleDisplayMode(.inline)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                FixedModalHeader(title: "", onClose: { dismiss() })
+            }
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 }
