@@ -13,3 +13,9 @@ Novità:
 Firma, Bundle Identifier, CloudKit, entitlements e compatibilità iPhone/iPad invariati.
 
 Build 18: biglietto digitale ridisegnato, date italiane e nuove pagine evento/cliente.
+
+AGGIORNAMENTO DA BUILD 23 FUNZIONANTE
+- Popup eliminazione evento centrato con alert iOS.
+- Recupero username/password tramite PIN di 6 cifre.
+- Nuovo pulsante Chiudi circolare e compatto nelle schermate modali.
+- File project.pbxproj, firma, target, CloudKit ed entitlements non modificati.

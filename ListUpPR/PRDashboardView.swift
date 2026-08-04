@@ -295,17 +295,21 @@ struct EventsView: View {
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
             .sheet(item: $editingEvent) { EditEventView(event: $0) }
-            .alert("Elimina evento?", isPresented: Binding(
-                get: { deletingEvent != nil },
-                set: { if !$0 { deletingEvent = nil } }
-            )) {
+            .alert(
+                "Eliminare l’evento?",
+                isPresented: Binding(
+                    get: { deletingEvent != nil },
+                    set: { if !$0 { deletingEvent = nil } }
+                ),
+                presenting: deletingEvent
+            ) { event in
                 Button("Annulla", role: .cancel) { deletingEvent = nil }
                 Button("Elimina", role: .destructive) {
-                    if let event = deletingEvent { model.deleteEvent(event) }
+                    model.deleteEvent(event)
                     deletingEvent = nil
                 }
-            } message: {
-                Text(deletingEvent.map { "Verranno eliminati definitivamente l’evento ‘\($0.name)’ e tutti i clienti collegati. Questa operazione non può essere annullata." } ?? "")
+            } message: { event in
+                Text("Verranno eliminati definitivamente l’evento \(event.name) e tutti i clienti collegati. Questa operazione non può essere annullata.")
             }
         }
     }
@@ -669,7 +673,7 @@ struct ChangePasswordView: View {
                 }.disabled(password.count < 4 || password != confirmation)
             }.navigationTitle("Cambia password")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") } } }
         }
     }
 }
@@ -687,7 +691,7 @@ struct ChangePRNameView: View {
             }.navigationTitle("Modifica nome")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { name = model.profile?.name ?? "" }
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") } } }
         }
     }
 }

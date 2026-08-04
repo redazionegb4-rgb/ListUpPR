@@ -145,17 +145,17 @@ final class AppModel: ObservableObject {
     }
 
 
-    func recoverUsername(prName: String, recoveryPIN: String) -> String? {
-        let cleanName = prName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    func recoverUsername(name: String, recoveryPIN: String) -> String? {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanPIN = recoveryPIN.filter(\.isNumber)
         guard cleanPIN.count == 6 else { return nil }
         return accounts.first(where: {
-            $0.profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == cleanName &&
+            $0.profile.name.compare(cleanName, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame &&
             $0.profile.recoveryPIN == cleanPIN
         })?.profile.loginUsername
     }
 
-    func resetPassword(username: String, recoveryPIN: String, newPassword: String) -> Bool {
+    func resetForgottenPassword(username: String, recoveryPIN: String, newPassword: String) -> Bool {
         let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cleanPIN = recoveryPIN.filter(\.isNumber)
         guard cleanPIN.count == 6, newPassword.count >= 4,
@@ -164,7 +164,7 @@ final class AppModel: ObservableObject {
               }) else { return false }
         accounts[index].profile.password = newPassword
         if activeAccountID == accounts[index].id { profile = accounts[index].profile }
-        save()
+        persistAccounts()
         return true
     }
 

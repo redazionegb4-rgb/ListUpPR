@@ -118,28 +118,23 @@ struct FixedModalHeader: View {
     let onClose: () -> Void
 
     var body: some View {
-        ZStack {
+        HStack {
             if !title.isEmpty {
-                Text(title)
-                    .font(.headline)
-                    .lineLimit(1)
+                Text(title).font(.headline)
             }
-            HStack {
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(.primary)
-                        .frame(width: 40, height: 40)
-                        .background(.thinMaterial, in: Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.10), lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Chiudi")
+            Spacer()
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 40, height: 40)
+                    .background(.thinMaterial, in: Circle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Chiudi")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 8)
         .background(.ultraThinMaterial)
         .overlay(alignment: .bottom) { Divider().opacity(0.35) }
     }
