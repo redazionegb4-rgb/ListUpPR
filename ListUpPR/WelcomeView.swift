@@ -265,9 +265,14 @@ struct ModernPINField: View {
                 Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 SecureField(placeholder, text: $text)
                     .keyboardType(.numberPad)
-                    .onChange(of: text) { _, value in text = String(value.filter(\.isNumber).prefix(6)) }
+                    .textInputAutocapitalization(.never)
+                    .onChange(of: text) { _, value in
+                        text = String(value.filter(\.isNumber).prefix(6))
+                    }
             }
         }
+        .padding(14)
+        .background(Color.primary.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
     }
 }
 
