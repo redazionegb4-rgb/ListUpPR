@@ -18,6 +18,7 @@ struct Guest: Identifiable, Codable, Hashable {
     var price: Double
     var deposit: Double
     var notes: String
+    var phone: String? = nil
     var entered: Bool = false
     var entryTime: Date? = nil
 
@@ -130,6 +131,7 @@ final class AppModel: ObservableObject {
                 price: guest.price,
                 deposit: guest.deposit,
                 notes: guest.notes,
+                phone: guest.phone,
                 entered: false,
                 entryTime: nil
             )
@@ -161,6 +163,32 @@ final class AppModel: ObservableObject {
         guests[index].entryTime = nil
         guestsByEvent[lastEntry.eventID] = guests
         self.lastEntry = nil
+        save()
+    }
+
+
+    func updateGuest(_ guest: Guest, eventID: UUID) {
+        guard var guests = guestsByEvent[eventID],
+              let index = guests.firstIndex(where: { $0.id == guest.id }) else { return }
+        guests[index] = guest
+        guestsByEvent[eventID] = guests
+        save()
+    }
+
+    func hasDuplicateGuest(firstName: String, lastName: String, eventID: UUID, excluding guestID: UUID? = nil) -> Bool {
+        let target = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespacesAndNewlines).folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        guard !target.isEmpty else { return false }
+        return (guestsByEvent[eventID] ?? []).contains { guest in
+            guard guest.id != guestID else { return false }
+            return guest.fullName.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current) == target
+        }
+    }
+
+    func copyGuests(from sourceEventID: UUID, to destinationEventID: UUID) {
+        let copies = (guestsByEvent[sourceEventID] ?? []).map { guest in
+            Guest(firstName: guest.firstName, lastName: guest.lastName, listName: guest.listName, packageName: guest.packageName, price: guest.price, deposit: guest.deposit, notes: guest.notes, phone: guest.phone, entered: false, entryTime: nil)
+        }
+        guestsByEvent[destinationEventID, default: []].append(contentsOf: copies)
         save()
     }
 

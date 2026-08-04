@@ -1,19 +1,16 @@
-GUESTLY PR - BUILD 2
-
-Aprire ListUpPR.xcodeproj con Xcode.
-In Signing & Capabilities selezionare il proprio Team Apple.
+LISTUP PR - BUILD 6 REDESIGN
 
 Novità:
-- Grafica completamente rifatta
-- Nuova icona
-- Codice PR numerico di 3 cifre
-- Registrazione PR con password
-- Accesso PR con codice + password
-- Accesso addetto con solo codice
-- Home con statistiche
-- Eventi, clienti e impostazioni separati
-- Tema automatico, chiaro e scuro
-- Gestione clienti, pacchetti, acconti e ingressi
+- Home completamente ridisegnata con pannello ingressi e percentuale in tempo reale
+- Nuove azioni rapide e grafica premium
+- Modifica completa dei clienti già inseriti
+- Numero di telefono facoltativo per ogni cliente
+- Chiamata e messaggio rapidi dal menu cliente
+- Controllo automatico dei nominativi duplicati
+- Copia clienti da un evento a un altro
+- Ricerca anche per numero di telefono
+- Lista evento ridisegnata con avanzamento e filtri
+- Compatibilità iPhone e iPad mantenuta
+- Firma, Bundle Identifier, CloudKit ed entitlements non modificati
 
-Nota tecnica:
-La build salva e aggiorna correttamente i dati sul dispositivo. Il progetto contiene già entitlement e opzione CloudKit, ma per la sincronizzazione reale tra due iPhone occorre configurare e attivare il container iCloud nel proprio account Developer e completare lo schema CloudKit.
+Aprire ListUpPR.xcodeproj con Xcode e selezionare il proprio Team.
