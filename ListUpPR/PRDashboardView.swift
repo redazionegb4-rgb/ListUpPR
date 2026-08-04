@@ -295,21 +295,21 @@ struct EventsView: View {
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
             .sheet(item: $editingEvent) { EditEventView(event: $0) }
-            .alert(
-                "Eliminare l’evento?",
+            .confirmationDialog(
+                "Gestisci evento",
                 isPresented: Binding(
                     get: { deletingEvent != nil },
                     set: { if !$0 { deletingEvent = nil } }
                 ),
-                presenting: deletingEvent
-            ) { event in
-                Button("Annulla", role: .cancel) { deletingEvent = nil }
-                Button("Elimina", role: .destructive) {
-                    model.deleteEvent(event)
+                titleVisibility: .visible
+            ) {
+                Button("Elimina definitivamente", role: .destructive) {
+                    if let event = deletingEvent { model.deleteEvent(event) }
                     deletingEvent = nil
                 }
-            } message: { event in
-                Text("Verranno eliminati definitivamente l’evento \(event.name) e tutti i clienti collegati. Questa operazione non può essere annullata.")
+                Button("Annulla", role: .cancel) { deletingEvent = nil }
+            } message: {
+                Text(deletingEvent.map { "Vuoi eliminare l’evento \($0.name) e tutti i clienti collegati?" } ?? "")
             }
         }
     }
@@ -673,7 +673,7 @@ struct ChangePasswordView: View {
                 }.disabled(password.count < 4 || password != confirmation)
             }.navigationTitle("Cambia password")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
 }
@@ -691,7 +691,7 @@ struct ChangePRNameView: View {
             }.navigationTitle("Modifica nome")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { name = model.profile?.name ?? "" }
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { dismiss() } label: { Image(systemName: "xmark.circle.fill") } } }
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
     }
 }

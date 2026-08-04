@@ -119,23 +119,24 @@ struct FixedModalHeader: View {
 
     var body: some View {
         HStack {
-            if !title.isEmpty {
-                Text(title).font(.headline)
-            }
-            Spacer()
             Button(action: onClose) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .frame(width: 40, height: 40)
-                    .background(.thinMaterial, in: Circle())
+                Label("Chiudi", systemImage: "xmark")
+                    .font(.subheadline.bold())
+                    .padding(.horizontal, 13)
+                    .frame(height: 38)
+                    .background(.thinMaterial, in: Capsule())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Chiudi")
+            Spacer()
+            if !title.isEmpty {
+                Text(title).font(.headline)
+                Spacer()
+                Color.clear.frame(width: 92, height: 38)
+            }
         }
-        .padding(.horizontal, 18)
+        .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .background(.ultraThinMaterial)
-        .overlay(alignment: .bottom) { Divider().opacity(0.35) }
+        .overlay(alignment: .bottom) { Divider().opacity(0.5) }
     }
 }
