@@ -89,6 +89,7 @@ final class AppModel: ObservableObject {
     private let defaults = UserDefaults.standard
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let recoveryPinsKey = "listup.recoveryPins.v1"
 
     init() {
         load()
@@ -105,10 +106,11 @@ final class AppModel: ObservableObject {
     var enteredPeople: Int { activeGuests.filter(\.entered).count }
     var activeEvent: PREvent? { upcomingEvents.first(where: { $0.isActive }) ?? upcomingEvents.first }
 
-    func registerPR(name: String, username: String, password: String) -> Bool {
+    func registerPR(name: String, username: String, password: String, recoveryPIN: String) -> Bool {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanUsername = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4 else { return false }
+        let cleanPIN = recoveryPIN.filter(\.isNumber)
+        guard !cleanName.isEmpty, isValidUsername(cleanUsername), password.count >= 4, cleanPIN.count == 6 else { return false }
         commitActiveAccount()
         guard !accounts.contains(where: { $0.profile.loginUsername.lowercased() == cleanUsername }) else { return false }
         let usedCodes = Set(accounts.map { $0.profile.code })
@@ -122,6 +124,7 @@ final class AppModel: ObservableObject {
             createdAt: .now
         )
         accounts.append(account)
+        storeRecoveryPIN(cleanPIN, for: account.id)
         activate(account)
         selectedRole = .pr
         save()
@@ -150,6 +153,47 @@ final class AppModel: ObservableObject {
     private func isValidUsername(_ username: String) -> Bool {
         guard username.count >= 4 && username.count <= 24 else { return false }
         return username.allSatisfy { $0.isLetter || $0.isNumber || $0 == "." || $0 == "_" }
+    }
+
+    private var recoveryPins: [String: String] {
+        get { defaults.dictionary(forKey: recoveryPinsKey) as? [String: String] ?? [:] }
+        set { defaults.set(newValue, forKey: recoveryPinsKey) }
+    }
+
+    private func storeRecoveryPIN(_ pin: String, for accountID: UUID) {
+        var pins = recoveryPins
+        pins[accountID.uuidString] = pin
+        recoveryPins = pins
+    }
+
+    var hasRecoveryPIN: Bool {
+        guard let activeAccountID else { return false }
+        return recoveryPins[activeAccountID.uuidString] != nil
+    }
+
+    func setRecoveryPIN(_ pin: String) -> Bool {
+        let cleanPIN = pin.filter(\.isNumber)
+        guard cleanPIN.count == 6, let activeAccountID else { return false }
+        storeRecoveryPIN(cleanPIN, for: activeAccountID)
+        return true
+    }
+
+    func recoverAccount(identifier: String, pin: String, newPassword: String) -> String? {
+        let cleanIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanPIN = pin.filter(\.isNumber)
+        guard !cleanIdentifier.isEmpty, cleanPIN.count == 6, newPassword.count >= 4 else { return nil }
+        guard let index = accounts.firstIndex(where: {
+            $0.profile.loginUsername.lowercased() == cleanIdentifier ||
+            $0.profile.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == cleanIdentifier
+        }) else { return nil }
+        let accountID = accounts[index].id
+        guard recoveryPins[accountID.uuidString] == cleanPIN else { return nil }
+        accounts[index].profile.password = newPassword
+        if activeAccountID == accountID {
+            profile = accounts[index].profile
+        }
+        save()
+        return accounts[index].profile.loginUsername
     }
 
     func loginEntrance(code: String) -> Bool {
@@ -376,7 +420,12 @@ final class AppModel: ObservableObject {
     func updateSync(_ enabled: Bool) { syncEnabled = enabled; save() }
 
     func resetAllData() {
-        if let activeAccountID { accounts.removeAll { $0.id == activeAccountID } }
+        if let activeAccountID {
+            accounts.removeAll { $0.id == activeAccountID }
+            var pins = recoveryPins
+            pins[activeAccountID.uuidString] = nil
+            recoveryPins = pins
+        }
         profile = nil; selectedRole = nil; events = []; guestsByEvent = [:]; entranceCode = ""; activeAccountID = nil
         persistAccounts()
         savePreferences()
