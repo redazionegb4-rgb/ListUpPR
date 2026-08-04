@@ -86,23 +86,23 @@ struct PRLoginView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Accedi con uno dei due dati") {
+                Section("Dati di accesso PR") {
                     TextField("Codice PR di 3 cifre", text: $code)
                         .keyboardType(.numberPad)
                         .onChange(of: code) { _, newValue in
                             code = String(newValue.filter(\.isNumber).prefix(3))
                         }
-                    SecureField("Oppure inserisci la password", text: $password)
+                    SecureField("Password", text: $password)
                 }
                 Section {
-                    Text("Non è necessario compilare entrambi i campi: puoi entrare usando solamente il codice PR oppure solamente la password.")
+                    Text("Per evitare accessi al profilo sbagliato sono richiesti sia il codice PR sia la password. Password uguali tra PR diversi non creano conflitti.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                if error { Text("Codice o password non corretti.").foregroundStyle(.red) }
+                if error { Text("Codice PR o password non corretti.").foregroundStyle(.red) }
                 Button("Accedi") {
                     if model.loginAsPR(code: code, password: password) { dismiss() } else { error = true }
-                }.disabled(code.filter(\.isNumber).count != 3 && password.isEmpty)
+                }.disabled(code.filter(\.isNumber).count != 3 || password.isEmpty)
             }
             .navigationTitle("Bentornato")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
@@ -227,6 +227,28 @@ struct QRScanResultView: View {
                 }
                 .padding(16)
                 .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+
+                if result.isValid && !result.paymentTitle.isEmpty {
+                    VStack(spacing: 8) {
+                        HStack {
+                            Image(systemName: result.amountDue > 0 ? "creditcard.trianglebadge.exclamationmark.fill" : "checkmark.seal.fill")
+                                .font(.title2)
+                            Text(result.paymentTitle).font(.headline.bold())
+                        }
+                        .foregroundStyle(result.amountDue > 0 ? .orange : .green)
+                        if result.amountDue > 0 {
+                            Text(result.amountDue, format: .currency(code: "EUR"))
+                                .font(.system(size: 30, weight: .black, design: .rounded))
+                        }
+                        Text(result.paymentDetail)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(16)
+                    .background((result.amountDue > 0 ? Color.orange : Color.green).opacity(0.12), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                }
 
                 Text(result.detail)
                     .font(.subheadline)

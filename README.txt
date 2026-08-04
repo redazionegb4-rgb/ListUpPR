@@ -1,10 +1,15 @@
-LISTUP PR – BUILD 10
+Guestly PR / ListUpPR - Build 13
 
-Correzioni:
-- QR Code versione 2 univoco per ogni cliente, con token personale e controllo evento/PR.
-- Pulsante Aggiungi cliente funzionante dalla Dashboard.
-- Nessun evento o cliente demo; rimossi automaticamente anche i vecchi eventi demo vuoti.
-- Conferme di eliminazione mostrate come alert centrati.
-- Compatibilità iPhone e iPad mantenuta.
+Correzioni principali:
+- Risolto il foglio vuoto dalla Dashboard: Aggiungi cliente apre sempre l'evento selezionato.
+- Accesso PR reso univoco con codice PR + password obbligatori.
+- Password uguali tra PR diversi restano consentite e non creano conflitti.
+- Creazione cliente semplificata: pacchetto e costo, senza acconto del PR.
+- Il pagamento viene effettuato alla cassa.
+- Popup QR mostra nome PR, codice, evento, accesso valido e stato pagamento:
+  * nessun pagamento / ingresso omaggio
+  * pagamento completo
+  * intero importo da pagare in cassa
+  * saldo residuo da pagare in cassa
 
-Aprire ListUpPR.xcodeproj con Xcode e selezionare il proprio Team in Signing & Capabilities.
+Bundle Identifier, firma, CloudKit ed entitlements non sono stati modificati.

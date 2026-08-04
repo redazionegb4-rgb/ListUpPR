@@ -15,8 +15,7 @@ struct PRMainView: View {
 struct PRDashboardView: View {
     @EnvironmentObject var model: AppModel
     @State private var showNewEvent = false
-    @State private var showAddGuest = false
-    @State private var targetEventID: UUID?
+    @State private var targetEvent: PREvent?
 
     private var waiting: Int { model.totalPeople - model.enteredPeople }
     private var progress: Double { model.totalPeople == 0 ? 0 : Double(model.enteredPeople) / Double(model.totalPeople) }
@@ -44,8 +43,8 @@ struct PRDashboardView: View {
             }
             .navigationDestination(for: PREvent.self) { EventDetailView(event: $0, entranceMode: false) }
             .sheet(isPresented: $showNewEvent) { NewEventView() }
-            .sheet(isPresented: $showAddGuest) {
-                if let eventID = targetEventID { AddGuestView(eventID: eventID) }
+            .sheet(item: $targetEvent) { event in
+                AddGuestView(eventID: event.id)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -111,8 +110,7 @@ struct PRDashboardView: View {
             DashboardAction(icon: "calendar.badge.plus", title: "Nuovo evento") { showNewEvent = true }
             DashboardAction(icon: "person.badge.plus", title: "Aggiungi cliente") {
                 if let event = model.activeEvent ?? model.events.sorted(by: { $0.date > $1.date }).first {
-                    targetEventID = event.id
-                    showAddGuest = true
+                    targetEvent = event
                 } else {
                     showNewEvent = true
                 }

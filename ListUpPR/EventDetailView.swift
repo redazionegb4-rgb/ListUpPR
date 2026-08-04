@@ -285,12 +285,10 @@ struct AddGuestView: View {
     @State private var listName = ""
     @State private var packageName = "Ingresso standard"
     @State private var priceText = ""
-    @State private var depositText = ""
     @State private var notes = ""
     @State private var duplicateWarning = false
 
     private var price: Double { Double(priceText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
-    private var deposit: Double { Double(depositText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
 
     var body: some View {
         NavigationStack {
@@ -314,17 +312,11 @@ struct AddGuestView: View {
                         placeholder: "Es. 20,00",
                         text: $priceText
                     )
-                    BookingAmountField(
-                        title: "Acconto già versato",
-                        explanation: "Lascia vuoto se il cliente non ha pagato nulla",
-                        placeholder: "Es. 10,00",
-                        text: $depositText
-                    )
                     TextField("Note: tavolo, accompagnatore, richieste…", text: $notes, axis: .vertical).lineLimit(2...5)
                 } header: {
                     Text("Prenotazione")
                 } footer: {
-                    Text("Il saldo rimanente viene calcolato automaticamente: prezzo totale meno acconto.")
+                    Text("Il PR inserisce solo il pacchetto venduto e il relativo costo. Il pagamento viene effettuato direttamente alla cassa.")
                 }
 
                 if duplicateWarning {
@@ -343,7 +335,7 @@ struct AddGuestView: View {
                         listName: listName,
                         packageName: packageName,
                         price: max(0, price),
-                        deposit: min(max(0, deposit), max(0, price)),
+                        deposit: 0,
                         notes: notes,
                         phone: phone
                     )
@@ -394,10 +386,9 @@ struct EditGuestView: View {
                     TextField("Nome lista", text: $guest.listName)
                     TextField("Pacchetto", text: $guest.packageName)
                     TextField("Prezzo", value: $guest.price, format: .number).keyboardType(.decimalPad)
-                    TextField("Acconto", value: $guest.deposit, format: .number).keyboardType(.decimalPad)
                     TextField("Note", text: $guest.notes, axis: .vertical)
                 }
-                Button("Salva modifiche") { guest.deposit = min(guest.deposit, guest.price); model.updateGuest(guest, eventID: eventID); dismiss() }
+                Button("Salva modifiche") { model.updateGuest(guest, eventID: eventID); dismiss() }
             }.navigationTitle("Modifica cliente")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Chiudi") { dismiss() } } }
         }
@@ -409,7 +400,7 @@ struct QuickAddGuestsView: View {
     @Environment(\.dismiss) var dismiss
     let eventID: UUID
     @State private var names = ""; @State private var listName = ""; @State private var packageName = "Ingresso"
-    @State private var price = 0.0; @State private var deposit = 0.0
+    @State private var price = 0.0
 
     private var parsedNames: [(String, String)] {
         names.split(whereSeparator: \.isNewline).compactMap { line in
@@ -431,11 +422,10 @@ struct QuickAddGuestsView: View {
                     TextField("Nome lista", text: $listName)
                     TextField("Pacchetto scelto", text: $packageName)
                     TextField("Prezzo per persona", value: $price, format: .number).keyboardType(.decimalPad)
-                    TextField("Acconto per persona", value: $deposit, format: .number).keyboardType(.decimalPad)
                 }
                 Button("Aggiungi \(parsedNames.count) clienti") {
                     for (first, last) in parsedNames where !model.hasDuplicateGuest(firstName: first, lastName: last, eventID: eventID) {
-                        model.addGuest(Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: price, deposit: min(deposit, price), notes: ""), to: eventID)
+                        model.addGuest(Guest(firstName: first, lastName: last, listName: listName, packageName: packageName, price: price, deposit: 0, notes: ""), to: eventID)
                     }
                     dismiss()
                 }.disabled(parsedNames.isEmpty)

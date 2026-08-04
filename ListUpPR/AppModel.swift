@@ -50,6 +50,9 @@ struct QRCheckInResult: Identifiable {
     let eventName: String
     let prName: String
     let prCode: String
+    let paymentTitle: String
+    let paymentDetail: String
+    let amountDue: Double
     let detail: String
 }
 
@@ -116,16 +119,10 @@ final class AppModel: ObservableObject {
         commitActiveAccount()
         let cleanCode = code.filter(\.isNumber)
         let cleanPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
-        let match: PRAccount?
-        if !cleanCode.isEmpty {
-            match = accounts.first(where: { $0.profile.code == cleanCode })
-        } else if !cleanPassword.isEmpty {
-            let matches = accounts.filter { $0.profile.password == cleanPassword }
-            match = matches.sorted { $0.createdAt > $1.createdAt }.first
-        } else {
-            match = nil
-        }
-        guard let match else { return false }
+        guard cleanCode.count == 3, !cleanPassword.isEmpty,
+              let match = accounts.first(where: {
+                  $0.profile.code == cleanCode && $0.profile.password == cleanPassword
+              }) else { return false }
         activate(match)
         selectedRole = .pr
         save()
@@ -220,26 +217,26 @@ final class AppModel: ObservableObject {
               let data = Data(base64Encoded: String(encoded.dropFirst(prefix.count))),
               let payload = try? decoder.decode(GuestQRPayload.self, from: data),
               payload.version == 2 else {
-            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: "", eventName: "", prName: "", prCode: "", detail: "QR non valido o non generato da Guestly PR")
+            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: "", eventName: "", prName: "", prCode: "", paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "QR non valido o non generato da Guestly PR")
         }
 
         guard let accountIndex = accounts.firstIndex(where: { $0.profile.code == payload.prCode }) else {
-            return QRCheckInResult(isValid: false, title: "PR non trovato", guestName: "", eventName: "", prName: "", prCode: payload.prCode, detail: "Aggiorna i dati e riprova")
+            return QRCheckInResult(isValid: false, title: "PR non trovato", guestName: "", eventName: "", prName: "", prCode: payload.prCode, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Aggiorna i dati e riprova")
         }
         var account = accounts[accountIndex]
         guard let event = account.events.first(where: { $0.id == payload.eventID }) else {
-            return QRCheckInResult(isValid: false, title: "Evento non trovato", guestName: "", eventName: "", prName: account.profile.name, prCode: account.profile.code, detail: "Il QR non appartiene a un evento disponibile")
+            return QRCheckInResult(isValid: false, title: "Evento non trovato", guestName: "", eventName: "", prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Il QR non appartiene a un evento disponibile")
         }
         let key = payload.eventID.uuidString
         guard var guests = account.guestsByEvent[key],
               let index = guests.firstIndex(where: { $0.id == payload.guestID }) else {
-            return QRCheckInResult(isValid: false, title: "Cliente non trovato", guestName: "", eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "Il cliente non è presente nella lista")
+            return QRCheckInResult(isValid: false, title: "Cliente non trovato", guestName: "", eventName: event.name, prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Il cliente non è presente nella lista")
         }
         guard payload.token == guests[index].effectiveQRToken else {
-            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "QR non valido per questo cliente")
+            return QRCheckInResult(isValid: false, title: "Accesso non valido", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "QR non valido per questo cliente")
         }
         if guests[index].entered {
-            return QRCheckInResult(isValid: false, title: "Ingresso già registrato", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "Questo QR è già stato utilizzato")
+            return QRCheckInResult(isValid: false, title: "Ingresso già registrato", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, paymentTitle: "", paymentDetail: "", amountDue: 0, detail: "Questo QR è già stato utilizzato")
         }
 
         guests[index].entered = true
@@ -251,7 +248,23 @@ final class AppModel: ObservableObject {
             lastEntry = (payload.eventID, payload.guestID)
         }
         persistAccounts()
-        return QRCheckInResult(isValid: true, title: "ACCESSO VALIDO", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, detail: "Ingresso registrato correttamente")
+        let amountDue = guests[index].remaining
+        let paymentTitle: String
+        let paymentDetail: String
+        if guests[index].price <= 0 {
+            paymentTitle = "NESSUN PAGAMENTO"
+            paymentDetail = "Ingresso omaggio: il cliente può accedere direttamente."
+        } else if amountDue <= 0 {
+            paymentTitle = "PAGAMENTO COMPLETO"
+            paymentDetail = "Il pacchetto risulta già saldato."
+        } else if guests[index].deposit <= 0 {
+            paymentTitle = "DA PAGARE IN CASSA"
+            paymentDetail = "Il cliente deve pagare l’intero importo alla cassa."
+        } else {
+            paymentTitle = "SALDO IN CASSA"
+            paymentDetail = "Il cliente deve completare il pagamento alla cassa."
+        }
+        return QRCheckInResult(isValid: true, title: "ACCESSO VALIDO", guestName: guests[index].fullName, eventName: event.name, prName: account.profile.name, prCode: account.profile.code, paymentTitle: paymentTitle, paymentDetail: paymentDetail, amountDue: amountDue, detail: "QR riconosciuto e ingresso registrato correttamente")
     }
 
     func toggleEntry(guestID: UUID, eventID: UUID) {
